@@ -10,25 +10,21 @@ else() # Assume a gcc compiler (or a gcc mimic like Clang). -Wno-missing-field-i
   set(CMAKE_CXX_FLAGS "-g -O3 -Wall -Wextra -Wpedantic -pedantic-errors -Werror -Wfatal-errors -Wno-psabi -Wno-unknown-pragmas -Wno-missing-field-initializers")
 endif()
 
-#
-# Commented out stuff is for when I decide I need mathplot!
-#
-
-## Tell the program where the mathplot fonts are, to compile them into the binary
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMPLOT_FONTS_DIR=\"\\\"${PROJECT_SOURCE_DIR}/mathplot/fonts\\\"\"")
-## Find the libraries which will be needed by mathplot
-#set(OpenGL_GL_PREFERENCE "GLVND") # Following `cmake --help-policy CMP0072`
-#find_package(OpenGL REQUIRED)
-#find_package(glfw3 3.3 REQUIRED)
-#find_package(Freetype REQUIRED)
+# Tell the program where the mathplot fonts are, to compile them into the binary
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMPLOT_FONTS_DIR=\"\\\"${PROJECT_SOURCE_DIR}/mathplot/fonts\\\"\"")
+# Find the libraries which will be needed by mathplot
+set(OpenGL_GL_PREFERENCE "GLVND") # Following `cmake --help-policy CMP0072`
+find_package(OpenGL REQUIRED)
+find_package(glfw3 3.3 REQUIRED)
+find_package(Freetype REQUIRED)
 find_package(nlohmann_json REQUIRED)
-## include files for graphics
-#set(MPLOT_INC_EXTRA ${ARMADILLO_INCLUDE_DIR} ${ARMADILLO_INCLUDE_DIRS} ${HDF5_INCLUDE_DIR})
-#include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS})
-## Assuming that you installed mathplot in-tree (i.e. 'next to' yourprog.cpp).
-#set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/mathplot" CACHE PATH "The path to mathplot")
-#include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.h to be found
-#include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
+# include files for graphics
+set(MPLOT_INC_EXTRA ${ARMADILLO_INCLUDE_DIR} ${ARMADILLO_INCLUDE_DIRS} ${HDF5_INCLUDE_DIR})
+include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS})
+# Assuming that you installed mathplot in-tree (i.e. 'next to' yourprog.cpp).
+set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot" CACHE PATH "The path to mathplot")
+include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.h to be found
+include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
 
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 
