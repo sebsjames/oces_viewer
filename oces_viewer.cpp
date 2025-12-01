@@ -54,7 +54,6 @@ void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx,
 
     if (cmpts_in_type == 1 && elmt_cmpt_byte_size == 4) {
         vvec_of_float.resize (gltf_accessor.count);
-        // copy data from model.buffers[gltf_buffer_view.buffer].data (vector<unsigned char>) to vvec_of_vec.
         std::cout << "Memcpy " << gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type << " bytes\n";
         std::memcpy (vvec_of_float.data(), model.buffers[gltf_buffer_view.buffer].data.data(),
                      gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type);
