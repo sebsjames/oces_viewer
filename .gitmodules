@@ -1,0 +1,3 @@
+[submodule "extern/tinygltf"]
+	path = extern/tinygltf
+	url = git@github.com:syoyo/tinygltf
