@@ -36,10 +36,11 @@ namespace oces
         std::string filename;
         std::string base_dir = "";
 
-        sm::vvec<sm::vec<float, 3>> position = {};
-        sm::vvec<sm::vec<float, 3>> orientation = {};
-        sm::vvec<float> focal_offset = {};
-        sm::vvec<float> diameter = {}; // Optical diameter
+        sm::vvec<sm::vec<float, 3>> position = {};    // Units: m
+        sm::vvec<sm::vec<float, 3>> orientation = {}; // Units: m
+        sm::vvec<float> focal_offset = {};            // Units: m
+        sm::vvec<float> diameter = {};                // Optical diameter. Units: m
+        sm::vvec<float> acceptance_angle = {};        // Derived from diameter and focal offset. Units: radians.
 
         std::vector<oces::mirrorplane> mirrorplanes;
 
@@ -166,6 +167,12 @@ namespace oces
                     if (eye["DIAMETER"] < sz) { this->get_buffer (model, ommatidialAccessors[eye["DIAMETER"]], this->diameter); }
                 }
 
+                // Compound-ray eye files use acceptance angle, rather than optical lens diameter
+                this->acceptance_angle.resize (this->diameter.size(), 0.0f);
+                for (size_t i = 0; i < this->diameter.size(); i++) {
+                    this->acceptance_angle[i] = 2.0f * std::atan2 (this->diameter[i] / 2.0f, std::abs (this->focal_offset[i]));
+                }
+
                 // Read "mirrorPlanes" from "OCES_eyes"
                 if (ev.Has("mirrorPlanes")) {
                     auto mplanes = ev.Get("mirrorPlanes");
@@ -225,6 +232,34 @@ namespace oces
                         }
                     }
                 }
+
+                // Act on mirror planes and add to position arrays
+                if (!this->mirrorplanes.empty()) {
+
+                    // Get size for one eye
+                    size_t sz = this->position.size();
+
+                    // Make space
+                    this->position.resize (2 * sz);
+                    this->orientation.resize (2 * sz);
+                    this->focal_offset.resize (2 * sz);
+                    this->diameter.resize (2 * sz);
+                    this->acceptance_angle.resize (2 * sz);
+
+                    sm::mat44<float> mirror = sm::mat44<float>::reflection (this->mirrorplanes[0].position, this->mirrorplanes[0].normal);
+                    for (size_t i = 0; i < sz; ++i) {
+                        // Mirror position and direction
+                        sm::vec<float> mpos = (mirror * this->position[i]).less_one_dim();
+                        sm::vec<float> mdir = (mirror * this->position[i]).less_one_dim();
+                        position[sz + i] = mpos;
+                        orientation[sz + i] = mdir;
+                        // Focal offset, diameter and acceptance angle are simply copied
+                        focal_offset[sz + i] = focal_offset[i];
+                        diameter[sz + i] = diameter[i];
+                        acceptance_angle[sz + i] = acceptance_angle[i];
+                    }
+                }
+
             }
         }
 
@@ -276,38 +311,16 @@ namespace oces
 
         void output_compound_ray_csv()
         {
-            // Compound-ray eye files use acceptance angle, rather than optical lens diameter
-            sm::vvec<float> acceptance_angle (this->diameter.size(), 0.0f);
-            for (size_t i = 0; i < this->diameter.size(); i++) {
-                acceptance_angle[i] = 2.0f * std::atan2 (this->diameter[i] / 2.0f, std::abs (this->focal_offset[i]));
-            }
-
             if (this->position.size() == this->orientation.size()
                 && this->position.size() == this->focal_offset.size()
-                && this->position.size() == acceptance_angle.size()) {
+                && this->position.size() == this->acceptance_angle.size()) {
                 for (size_t i = 0; i < this->position.size(); ++i) {
                     std::cout << this->position[i].str_comma_separated (' ') << " "
                               << this->orientation[i].str_comma_separated (' ')
-                              << " " << acceptance_angle[i]
+                              << " " << this->acceptance_angle[i]
                               << " " << this->focal_offset[i]
                               << std::endl;
-                    // (*) For compound-ray we have to convert diameter into an acceptance angle
                 }
-
-                if (!this->mirrorplanes.empty()) {
-                    // Also output the mirrored eye
-                    sm::mat44<float> mirror = sm::mat44<float>::reflection (this->mirrorplanes[0].position, this->mirrorplanes[0].normal);
-                    for (size_t i = 0; i < this->position.size(); ++i) {
-                        sm::vec<float> mpos = (mirror * this->position[i]).less_one_dim();
-                        sm::vec<float> mdir = (mirror * this->position[i]).less_one_dim();
-                        std::cout << mpos.str_comma_separated (' ') << " "
-                                  << mdir.str_comma_separated (' ')
-                                  << " " << acceptance_angle[i]
-                                  << " " << this->focal_offset[i]
-                                  << std::endl;
-                    }
-                }
-
             } else {
                 std::cerr << "position, orientation, focal_offset and diameter/acceptance_angle should all have the same number of elements.\n";
             }

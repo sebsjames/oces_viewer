@@ -11,7 +11,7 @@ else() # Assume a gcc compiler (or a gcc mimic like Clang). -Wno-missing-field-i
 endif()
 
 # Tell the program where the mathplot fonts are, to compile them into the binary
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMPLOT_FONTS_DIR=\"\\\"${PROJECT_SOURCE_DIR}/mathplot/fonts\\\"\"")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMPLOT_FONTS_DIR=\"\\\"${PROJECT_SOURCE_DIR}/extern/mathplot/fonts\\\"\"")
 # Find the libraries which will be needed by mathplot
 set(OpenGL_GL_PREFERENCE "GLVND") # Following `cmake --help-policy CMP0072`
 find_package(OpenGL REQUIRED)
@@ -29,9 +29,9 @@ include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h t
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}) # oces/reader.h
 
-  # The viewer is compiled from a single c++ file
+# View the eye with a mathplot-based program
 add_executable(oces_viewer oces_viewer.cpp)
-# target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
+target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
 
-# OCES format to compound-ray format
+# OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
