@@ -88,29 +88,6 @@ void output_compound_ray_csv (const sm::vvec<sm::vec<float, 3>>& position,
     }
 }
 
-#if 0
-// Just to re-write the original, wrong-unit focal_offset and diameter.
-void write_eye_data_file (const std::string& path_base,
-                          const sm::vvec<sm::vec<float, 3>>& position,
-                          const sm::vvec<sm::vec<float, 3>>& orientation,
-                          const sm::vvec<float>& focal_offset,
-                          const sm::vvec<float>& diameter)
-{
-    std::ofstream of;
-    std::string path = path_base + "/velox-eye-data.bin";
-    of.open (path.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
-    if (!of.is_open()) {
-        std::cerr << "Can't open file " << path << " for writing.\n";
-        return;
-    }
-    for (auto p : position) { of.write (reinterpret_cast<char*>(&p), sizeof p); }
-    for (auto o : orientation) { of.write (reinterpret_cast<char*>(&o), sizeof o); }
-    for (auto f : focal_offset) { of.write (reinterpret_cast<char*>(&f), sizeof f); }
-    for (auto d : diameter) { of.write (reinterpret_cast<char*>(&d), sizeof d); }
-    of.close();
-}
-#endif
-
 int main (int argc, char** argv)
 {
     if (argc < 2) {
