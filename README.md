@@ -1,5 +1,19 @@
 # oces_viewer
 
+Open an OCES file and output the ommatidia data to stdout.
+
+## Deps
+
+Clone this with submodules. These include tinygltf and mathplot, which itself has a submodule
+
+```bash
+git clone git@github.com:sebsjames/oces_viewer
+cd oces_viewer
+git submodule update --init --recursive
+```
+
+## gcc-14
+
 Currently, tinygltf won't compile with gcc-14:
 
 ```

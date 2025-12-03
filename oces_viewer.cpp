@@ -23,8 +23,21 @@
 #pragma warning( pop )
 #endif
 
-void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx,
-                 sm::vvec<sm::vec<float, 3>>& vvec_of_vec)
+/**
+ * Copy data from the buffer identified by accessor_idx into the output vvec.
+ *
+ * \tparam T The type of the data elements in output. May be a scalar such as float or double, or a
+ * fixed size data type such as sm::vec<float, 3> or float3
+ *
+ * \param model The initialized (by a tinygltf::TinyGLTF loader) tinygltf model reference.
+ *
+ * \param accessor_idx An integer index for the accessor to the glTF buffer
+ *
+ * \param output The output vvec. This will be resized, then filled with a *copy* of the data held
+ * in the TinyGLTF model.
+ */
+template<typename T>
+void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx, sm::vvec<T>& output)
 {
     if (accessor_idx == -1) { return; }
 
@@ -33,32 +46,70 @@ void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx,
     const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes(gltf_accessor.componentType);
     const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType(gltf_accessor.type);
 
-    if (cmpts_in_type == 3 && elmt_cmpt_byte_size == 4) {
-        vvec_of_vec.resize (gltf_accessor.count);
+
+    if (elmt_cmpt_byte_size == (static_cast<int32_t>(sizeof(T)) / cmpts_in_type)) {
+        output.resize (gltf_accessor.count);
         // copy data from model.buffers[gltf_buffer_view.buffer].data (vector<unsigned char>) to vvec_of_vec.
-        std::cout << "Memcpy " << gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type << " bytes\n";
-        std::memcpy (vvec_of_vec.data(), model.buffers[gltf_buffer_view.buffer].data.data(),
+        std::cerr << "Memcpy " << gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type
+                  << " bytes from accessor index " << accessor_idx << ", buffer view byte offset is " << gltf_buffer_view.byteOffset << "\n";
+        std::memcpy (output.data(),
+                     model.buffers[gltf_buffer_view.buffer].data.data() + gltf_buffer_view.byteOffset,
                      gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type);
+    } else {
+        std::cerr << "Failed to memcpy in get_buffer!\n cmpts_in_type = " << cmpts_in_type
+                  << "\n elmt_cmpt_byte_size = " <<  elmt_cmpt_byte_size
+                  << "\n sizeof(T) = " << static_cast<int32_t>(sizeof(T))
+                  << "\n sizeof(T)/cmpts_in_type = " << (static_cast<int32_t>(sizeof(T)) / cmpts_in_type) << std::endl;
     }
 }
 
-void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx,
-                 sm::vvec<float>& vvec_of_float)
+void output_compound_ray_csv (const sm::vvec<sm::vec<float, 3>>& position,
+                              const sm::vvec<sm::vec<float, 3>>& orientation,
+                              const sm::vvec<float>& focal_offset,
+                              const sm::vvec<float>& diameter)
 {
-    if (accessor_idx == -1) { return; }
+    // Compound-ray eye files use acceptance angle, rather than optical lens diameter
+    sm::vvec<float> acceptance_angle (diameter.size(), 0.0f);
+    for (size_t i = 0; i < diameter.size(); i++) {
+        acceptance_angle[i] = 2.0f * std::atan2 (diameter[i] / 2.0f, std::abs (focal_offset[i]));
+    }
 
-    const tinygltf::Accessor& gltf_accessor      = model.accessors[accessor_idx];
-    const tinygltf::BufferView& gltf_buffer_view = model.bufferViews[gltf_accessor.bufferView];
-    const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes(gltf_accessor.componentType);
-    const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType(gltf_accessor.type);
-
-    if (cmpts_in_type == 1 && elmt_cmpt_byte_size == 4) {
-        vvec_of_float.resize (gltf_accessor.count);
-        std::cout << "Memcpy " << gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type << " bytes\n";
-        std::memcpy (vvec_of_float.data(), model.buffers[gltf_buffer_view.buffer].data.data(),
-                     gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type);
+    if (position.size() == orientation.size() && position.size() == focal_offset.size() && position.size() == acceptance_angle.size()) {
+        for (size_t i = 0; i < position.size(); ++i) {
+            std::cout << position[i].str_comma_separated (' ') << " "
+                      << orientation[i].str_comma_separated (' ')
+                      << " " << acceptance_angle[i]
+                      << " " << focal_offset[i]
+                      << std::endl;
+            // (*) For compound-ray we have to convert diameter into an acceptance angle
+        }
+    } else {
+        std::cerr << "position, orientation, focal_offset and acceptance_angle should all have the same number of elements.\n";
     }
 }
+
+#if 0
+// Just to re-write the original, wrong-unit focal_offset and diameter.
+void write_eye_data_file (const std::string& path_base,
+                          const sm::vvec<sm::vec<float, 3>>& position,
+                          const sm::vvec<sm::vec<float, 3>>& orientation,
+                          const sm::vvec<float>& focal_offset,
+                          const sm::vvec<float>& diameter)
+{
+    std::ofstream of;
+    std::string path = path_base + "/velox-eye-data.bin";
+    of.open (path.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!of.is_open()) {
+        std::cerr << "Can't open file " << path << " for writing.\n";
+        return;
+    }
+    for (auto p : position) { of.write (reinterpret_cast<char*>(&p), sizeof p); }
+    for (auto o : orientation) { of.write (reinterpret_cast<char*>(&o), sizeof o); }
+    for (auto f : focal_offset) { of.write (reinterpret_cast<char*>(&f), sizeof f); }
+    for (auto d : diameter) { of.write (reinterpret_cast<char*>(&d), sizeof d); }
+    of.close();
+}
+#endif
 
 int main (int argc, char** argv)
 {
@@ -163,7 +214,7 @@ int main (int argc, char** argv)
                     continue;
                 }
 
-                std::cout << "Processing eye " << eyes.Get(i).Get("name").Get<std::string>()
+                std::cerr << "Processing eye " << eyes.Get(i).Get("name").Get<std::string>()
                           << " of type " << eyes.Get(i).Get("type").Get<std::string>() << std::endl;
 
                 // Good to go
@@ -178,29 +229,18 @@ int main (int argc, char** argv)
         sm::vvec<sm::vec<float, 3>> position = {};
         sm::vvec<sm::vec<float, 3>> orientation = {};
         sm::vvec<float> focal_offset = {};
-        sm::vvec<float> diameter = {};
+        sm::vvec<float> diameter = {}; // Optical diameter
 
         for (auto eye : eyes_OmmatidialProperties) {
             int sz = static_cast<int>(ommatidialAccessors.size());
-            if (eye["POSITION"] < sz) {
-                get_buffer (model, ommatidialAccessors[eye["POSITION"]], position);
-            }
-            if (eye["ORIENTATION"] < sz) {
-                get_buffer (model, ommatidialAccessors[eye["ORIENTATION"]], orientation);
-            }
-            if (eye["FOCAL_OFFSET"] < sz) {
-                get_buffer (model, ommatidialAccessors[eye["FOCAL_OFFSET"]], focal_offset);
-            }
-            if (eye["DIAMETER"] < sz) {
-                get_buffer (model, ommatidialAccessors[eye["DIAMETER"]], diameter);
-            }
+            if (eye["POSITION"] < sz) { get_buffer (model, ommatidialAccessors[eye["POSITION"]], position); }
+            if (eye["ORIENTATION"] < sz) { get_buffer (model, ommatidialAccessors[eye["ORIENTATION"]], orientation); }
+            if (eye["FOCAL_OFFSET"] < sz) { get_buffer (model, ommatidialAccessors[eye["FOCAL_OFFSET"]], focal_offset); }
+            if (eye["DIAMETER"] < sz) { get_buffer (model, ommatidialAccessors[eye["DIAMETER"]], diameter); }
         }
 
-        if (position.size() == orientation.size()
-            && position.size() == focal_offset.size()
-            && position.size() == diameter.size()) {
-            std::cout << "Success, can output csv!\n";
-        }
+        output_compound_ray_csv (position, orientation, focal_offset, diameter);
     }
+
     return 0;
 }
