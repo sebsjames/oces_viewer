@@ -1,6 +1,5 @@
 /*
- * To begin with, read OCES file and output data to stdout, but why not use
- * mathplot::compoundray::EyeVisual to display?
+ * Read OCES file and output data to stdout in compound ray .eye file format
  */
 
 #include <iostream>

@@ -27,7 +27,11 @@ include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.
 include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
 
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
+include_directories(BEFORE ${PROJECT_SOURCE_DIR}) # oces/reader.h
 
-# The viewer is compiled from a single c++ file
+  # The viewer is compiled from a single c++ file
 add_executable(oces_viewer oces_viewer.cpp)
 # target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
+
+# OCES format to compound-ray format
+add_executable(oces2cray oces2cray.cpp)
