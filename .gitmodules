@@ -1,6 +1,6 @@
 [submodule "extern/tinygltf"]
 	path = extern/tinygltf
-	url = git@github.com:syoyo/tinygltf
+	url = https://github.com/syoyo/tinygltf
 [submodule "extern/mathplot"]
 	path = extern/mathplot
-	url = git@github.com:sebsjames/mathplot
+	url = htpps://github.com/sebsjames/mathplot
