@@ -1,6 +1,5 @@
 /*
- * To begin with, read OCES file and output data to stdout, but why not use
- * mathplot::compoundray::EyeVisual to display?
+ * Read OCES file then display with mathplot::compoundray::EyeVisual
  */
 
 #include <iostream>
@@ -25,7 +24,7 @@ int main (int argc, char** argv)
     oces::reader oces_reader (filename);
 
     // Now view
-    [[maybe_unused]] float psrad = 0.5f;
+    [[maybe_unused]] float psrad = 0.0001f;
     if (argc > 2) { psrad = std::atof (argv[2]); }
 
     auto v = mplot::Visual<>(1024, 768, "mplot::compoundray::EyeVisual");
@@ -39,6 +38,7 @@ int main (int argc, char** argv)
 
     // Copy data into the ommatidia data structure
     ommatidia->resize (oces_reader.position.size());
+    std::cerr << "Copying " << oces_reader.position.size() << " ommatidia\n";
     for (size_t i = 0; i < oces_reader.position.size(); ++i) {
         (*ommatidia)[i].relativePosition = oces_reader.position[i];
         (*ommatidia)[i].relativeDirection = oces_reader.orientation[i];
@@ -64,15 +64,18 @@ int main (int argc, char** argv)
     [[maybe_unused]] auto ptype = mplot::compoundray::EyeVisual<>::projection_type::equirectangular; // mercator, equirectangular or cassini
     [[maybe_unused]] sm::vec<> centre = { 0, 0, 0 };
     [[maybe_unused]] sm::mat44<float> twod_tr;
-    twod_tr.translate (sm::vec<>{0,0,-0.1});
+
+    auto prange = sm::range<sm::vec<float, 3>>::search_initialized();
+    for (auto p : oces_reader.position) { prange.update (p); }
+    auto pspan = prange.span();
+    twod_tr.translate (pspan);
 
     // To avoid 2D, don't add spherical projections
-    //eyevm->add_spherical_projection (ptype, twod_tr, centre, psrad);
+    eyevm->add_spherical_projection (ptype, twod_tr, centre, psrad);
 
-    eyevm->pre_set_cone_length (4e-6f);
-    //eyevm->pre_set_disc_width (0.6e-5f);
     eyevm->show_sphere = true;
-    eyevm->show_rays = false;
+    eyevm->show_rays = true;
+    eyevm->ray_length = 0.002f;
     eyevm->finalize();
 
     [[maybe_unused]] auto ep = v.addVisualModel (eyevm);
