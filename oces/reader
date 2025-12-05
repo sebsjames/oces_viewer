@@ -250,7 +250,7 @@ namespace oces
                     for (size_t i = 0; i < sz; ++i) {
                         // Mirror position and direction
                         sm::vec<float> mpos = (mirror * this->position[i]).less_one_dim();
-                        sm::vec<float> mdir = (mirror * this->position[i]).less_one_dim();
+                        sm::vec<float> mdir = (mirror * this->orientation[i]).less_one_dim();
                         position[sz + i] = mpos;
                         orientation[sz + i] = mdir;
                         // Focal offset, diameter and acceptance angle are simply copied
