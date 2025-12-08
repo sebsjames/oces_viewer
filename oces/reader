@@ -11,6 +11,8 @@
 #include <sm/vec>
 #include <sm/mat44>
 
+#include <mplot/VisualCommon.h> // mplot::meshgroup
+
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -42,8 +44,13 @@ namespace oces
         sm::vvec<float> diameter = {};                // Optical diameter. Units: m
         sm::vvec<float> acceptance_angle = {};        // Derived from diameter and focal offset. Units: radians.
 
+        // A second eye may be mirrored by a mirrorplane
         std::vector<oces::mirrorplane> mirrorplanes;
+        // Store the matrix for the mirrors defined in mirrorplanes
         std::vector<sm::mat44<float>> mirrors;
+
+        // If we have a head mesh, store it here
+        mplot::meshgroup head_mesh;
 
         reader (const std::string& _filename)
         {
@@ -261,7 +268,19 @@ namespace oces
                         acceptance_angle[sz + i] = acceptance_angle[i];
                     }
                 }
+            }
 
+            // Process nodes (to get the head mesh)
+            sm::mat44<float> root_transform;
+            std::vector<int32_t> root_nodes (model.nodes.size(), 1);
+            for (auto& gltf_node : model.nodes) {
+                for (int32_t child : gltf_node.children) { root_nodes[child] = 0; }
+            }
+
+            for (size_t i = 0; i < root_nodes.size(); ++i) {
+                if (!root_nodes[i]) { continue; }
+                auto& gltf_node = model.nodes[i];
+                this->process_node (model, gltf_node, root_transform);
             }
         }
 
@@ -279,7 +298,7 @@ namespace oces
          * in the TinyGLTF model.
          */
         template<typename T>
-        void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx, sm::vvec<T>& output)
+        void get_buffer (const tinygltf::Model& model, const int32_t accessor_idx, std::vector<T>& output)
         {
             constexpr bool debug_get_buffer = false;
 
@@ -289,7 +308,6 @@ namespace oces
             const tinygltf::BufferView& gltf_buffer_view = model.bufferViews[gltf_accessor.bufferView];
             const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes(gltf_accessor.componentType);
             const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType(gltf_accessor.type);
-
 
             if (elmt_cmpt_byte_size == (static_cast<int32_t>(sizeof(T)) / cmpts_in_type)) {
                 output.resize (gltf_accessor.count);
@@ -301,6 +319,12 @@ namespace oces
                 std::memcpy (output.data(),
                              model.buffers[gltf_buffer_view.buffer].data.data() + gltf_buffer_view.byteOffset,
                              gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type);
+            } else if (elmt_cmpt_byte_size < (static_cast<int32_t>(sizeof(T)) / cmpts_in_type)) {
+                std::stringstream ee;
+                ee << "Failed to memcpy in get_buffer because elmt_cmpt_byte_size " << elmt_cmpt_byte_size
+                   << " < sizeof(T) = " << static_cast<int32_t>(sizeof(T))
+                   << "\n sizeof(T)/cmpts_in_type = " << (static_cast<int32_t>(sizeof(T)) / cmpts_in_type);
+                throw std::runtime_error (ee.str());
             } else {
                 std::stringstream ee;
                 ee << "Failed to memcpy in get_buffer!\n cmpts_in_type = " << cmpts_in_type
@@ -308,6 +332,97 @@ namespace oces
                    << "\n sizeof(T) = " << static_cast<int32_t>(sizeof(T))
                    << "\n sizeof(T)/cmpts_in_type = " << (static_cast<int32_t>(sizeof(T)) / cmpts_in_type);
                 throw std::runtime_error (ee.str());
+            }
+        }
+
+        // Process nodes to read head mesh
+        void process_node (const tinygltf::Model& model, const tinygltf::Node& gltf_node, const sm::mat44<float>& parent_matrix)
+        {
+            constexpr bool debug_gltf = true;
+
+            std::cerr << "Process node " << gltf_node.name << std::endl;
+
+            sm::mat44<float> translation;
+            if (!gltf_node.translation.empty()) {
+                auto tr = sm::vec<double>{ gltf_node.translation[0], gltf_node.translation[1], gltf_node.translation[2] };
+                sm::vec<float> trf = tr.as<float>();
+                translation.translate (trf);
+            }
+            sm::mat44<float> rotation;
+            if (!gltf_node.rotation.empty()) {
+                sm::quaternion<double> q(gltf_node.rotation[3], gltf_node.rotation[0], gltf_node.rotation[1], gltf_node.rotation[2]);
+                rotation.rotate (q);
+            }
+            sm::mat44<float> scale;
+            if (!gltf_node.scale.empty()) {
+                scale.scale (sm::vec<double>({ gltf_node.scale[0], gltf_node.scale[1], gltf_node.scale[2] }).as<float>());
+            }
+            sm::mat44<float> matrix;
+            if (!gltf_node.matrix.empty()) {
+                for (uint32_t i = 0; i < 16; ++i) { matrix.mat[i] = static_cast<float>(gltf_node.matrix[i]); }
+            }
+            const sm::mat44<float> node_xform = parent_matrix * matrix * translation * rotation * scale;
+
+            if (gltf_node.mesh != -1) {
+                const auto& gltf_mesh = model.meshes[gltf_node.mesh];
+                if constexpr (debug_gltf == true) {
+                    std::cerr << "Processing glTF mesh: '" << gltf_mesh.name << "'\n";
+                    std::cerr << "\tNum mesh primitive groups: " << gltf_mesh.primitives.size() << std::endl;
+                }
+                if (gltf_node.name == "head") {
+                    std::cerr << "Have head node; read mesh(es)\n";
+                    for (auto& gltf_primitive : gltf_mesh.primitives) {
+                        if (gltf_primitive.mode != TINYGLTF_MODE_TRIANGLES) { throw std::runtime_error ("Non-triangle primitive"); }
+                        std::cerr << "Have head mesh; reading it\n";
+                        head_mesh.name = gltf_mesh.name;
+                        // Indices
+                        {
+                            const tinygltf::Accessor& _accessor = model.accessors[gltf_primitive.indices];
+                            const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes (_accessor.componentType);
+                            const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType (_accessor.type);
+                            if (cmpts_in_type != 1) { throw std::runtime_error ("Expect 1 component in type for indices"); }
+                            if (elmt_cmpt_byte_size == 4) {
+                                this->get_buffer<uint32_t> (model, gltf_primitive.indices, head_mesh.indices);
+                            } else if (elmt_cmpt_byte_size == 2) {
+                                std::vector<uint16_t> hmi16;
+                                this->get_buffer<uint16_t> (model, gltf_primitive.indices, hmi16);
+                                // copy to head_mesh.indices
+                                head_mesh.indices.resize (hmi16.size());
+                                for (uint32_t i = 0; i < hmi16.size(); ++i) { head_mesh.indices[i] = hmi16[i]; }
+                            } else {
+                                throw std::runtime_error ("Deal with 1 byte or 8 byte index size");
+                            }
+                        }
+                        head_mesh.transform = node_xform;
+                        if constexpr (debug_gltf == true) { std::cerr << "\t\tNum triangles is indices size/3: " << head_mesh.indices.size() / 3 << std::endl; }
+                        // Positions
+                        assert (gltf_primitive.attributes.find( "POSITION" ) !=  gltf_primitive.attributes.end());
+                        const int32_t pos_accessor_idx = gltf_primitive.attributes.at ("POSITION");
+                        this->get_buffer<sm::vec<float>> (model, pos_accessor_idx, head_mesh.positions);
+                        if constexpr (debug_gltf == true) { std::cerr << "\t\tNum vertices(positions count): " << head_mesh.positions.size() << std::endl; }
+
+                        const auto& pos_gltf_accessor = model.accessors[pos_accessor_idx];
+                        sm::vec<double> minvals = { pos_gltf_accessor.minValues[0], pos_gltf_accessor.minValues[1], pos_gltf_accessor.minValues[2] };
+                        sm::vec<double> maxvals = { pos_gltf_accessor.maxValues[0], pos_gltf_accessor.maxValues[1], pos_gltf_accessor.maxValues[2] };
+                        head_mesh.object_aabb = sm::range<sm::vec<float>> (minvals.as<float>(), maxvals.as<float>());
+                        head_mesh.world_aabb = sm::range<sm::vec<float>> ((node_xform * head_mesh.object_aabb.min).less_one_dim(),
+                                                                          (node_xform * head_mesh.object_aabb.max).less_one_dim());
+                        // Normals
+                        auto normal_accessor_iter = gltf_primitive.attributes.find ("NORMAL");
+                        if (normal_accessor_iter != gltf_primitive.attributes.end()) {
+                            if constexpr (debug_gltf == true) { std::cerr << "\t\tHas vertex normals: true\n"; }
+                            const int32_t normal_accessor_idx = gltf_primitive.attributes.at ("NORMAL");
+                            this->get_buffer<sm::vec<float>> (model, normal_accessor_idx, head_mesh.normals);
+                        }
+                        // omit to read texture coordinates
+                        // omit handling of vertex colours
+                    }
+                }
+
+            } else if (!gltf_node.children.empty()) {
+                for (int32_t child : gltf_node.children) {
+                    this->process_node (model, model.nodes[child], node_xform);
+                }
             }
         }
 
