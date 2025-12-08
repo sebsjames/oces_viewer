@@ -319,7 +319,6 @@ namespace oces
             const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes(gltf_accessor.componentType);
             const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType(gltf_accessor.type);
 
-
             if (elmt_cmpt_byte_size == (static_cast<int32_t>(sizeof(T)) / cmpts_in_type)) {
                 output.resize (gltf_accessor.count);
                 // copy data from model.buffers[gltf_buffer_view.buffer].data (vector<unsigned char>) to vvec_of_vec.
@@ -330,6 +329,12 @@ namespace oces
                 std::memcpy (output.data(),
                              model.buffers[gltf_buffer_view.buffer].data.data() + gltf_buffer_view.byteOffset,
                              gltf_accessor.count * elmt_cmpt_byte_size * cmpts_in_type);
+            } else if (elmt_cmpt_byte_size < (static_cast<int32_t>(sizeof(T)) / cmpts_in_type)) {
+                std::stringstream ee;
+                ee << "Failed to memcpy in get_buffer because elmt_cmpt_byte_size " << elmt_cmpt_byte_size
+                   << " < sizeof(T) = " << static_cast<int32_t>(sizeof(T))
+                   << "\n sizeof(T)/cmpts_in_type = " << (static_cast<int32_t>(sizeof(T)) / cmpts_in_type);
+                throw std::runtime_error (ee.str());
             } else {
                 std::stringstream ee;
                 ee << "Failed to memcpy in get_buffer!\n cmpts_in_type = " << cmpts_in_type
@@ -381,7 +386,23 @@ namespace oces
                         std::cerr << "Have head mesh; reading it\n";
                         head_mesh.name = gltf_mesh.name;
                         // Indices
-                        this->get_buffer<unsigned int> (model, gltf_primitive.indices, head_mesh.indices);
+                        {
+                            const tinygltf::Accessor& _accessor = model.accessors[gltf_primitive.indices];
+                            const int32_t elmt_cmpt_byte_size = tinygltf::GetComponentSizeInBytes (_accessor.componentType);
+                            const int32_t cmpts_in_type  = tinygltf::GetNumComponentsInType (_accessor.type);
+                            if (cmpts_in_type != 1) { throw std::runtime_error ("Expect 1 component in type for indices"); }
+                            if (elmt_cmpt_byte_size == 4) {
+                                this->get_buffer<uint32_t> (model, gltf_primitive.indices, head_mesh.indices);
+                            } else if (elmt_cmpt_byte_size == 2) {
+                                std::vector<uint16_t> hmi16;
+                                this->get_buffer<uint16_t> (model, gltf_primitive.indices, hmi16);
+                                // copy to head_mesh.indices
+                                head_mesh.indices.resize (hmi16.size());
+                                for (uint32_t i = 0; i < hmi16.size(); ++i) { head_mesh.indices[i] = hmi16[i]; }
+                            } else {
+                                throw std::runtime_error ("Deal with 1 byte or 8 byte index size");
+                            }
+                        }
                         head_mesh.transform = node_xform;
                         if constexpr (debug_gltf == true) { std::cerr << "\t\tNum triangles is indices size/3: " << head_mesh.indices.size() / 3 << std::endl; }
                         // Positions
