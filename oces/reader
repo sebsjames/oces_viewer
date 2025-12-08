@@ -43,6 +43,7 @@ namespace oces
         sm::vvec<float> acceptance_angle = {};        // Derived from diameter and focal offset. Units: radians.
 
         std::vector<oces::mirrorplane> mirrorplanes;
+        std::vector<sm::mat44<float>> mirrors;
 
         reader (const std::string& _filename)
         {
@@ -247,10 +248,11 @@ namespace oces
                     this->acceptance_angle.resize (2 * sz);
 
                     sm::mat44<float> mirror = sm::mat44<float>::reflection (this->mirrorplanes[0].position, this->mirrorplanes[0].normal);
+                    this->mirrors.push_back (mirror); // Saved for client code to use
                     for (size_t i = 0; i < sz; ++i) {
                         // Mirror position and direction
                         sm::vec<float> mpos = (mirror * this->position[i]).less_one_dim();
-                        sm::vec<float> mdir = (mirror * this->position[i]).less_one_dim();
+                        sm::vec<float> mdir = (mirror * this->orientation[i]).less_one_dim();
                         position[sz + i] = mpos;
                         orientation[sz + i] = mdir;
                         // Focal offset, diameter and acceptance angle are simply copied
