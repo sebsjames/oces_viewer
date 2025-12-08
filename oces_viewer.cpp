@@ -68,7 +68,8 @@ int main (int argc, char** argv)
         ommatidiaColours[i] = cm.convert (ommatidiaData[i]);
     }
 
-    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get());
+    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(),
+                                                                    &oces_reader.head_mesh);
     v.bindmodel (eyevm);
     eyevm->name = "CompoundRay Eye";
     eyevm->show_cones = true;
