@@ -38,6 +38,7 @@ namespace oces
         std::string filename;
         std::string base_dir = "";
 
+        // These probably want to go into an 'eye' struct
         sm::vvec<sm::vec<float, 3>> position = {};    // Units: m
         sm::vvec<sm::vec<float, 3>> orientation = {}; // Units: m
         sm::vvec<float> focal_offset = {};            // Units: m
@@ -240,6 +241,29 @@ namespace oces
                         }
                     }
                 }
+
+                // Compute statistics on the eye
+                std::cerr << "Number of ommatidia: " << this->position.size() << std::endl;
+                std::cerr << "Optical diameter mean/std: "
+                          << this->diameter.mean() << " (" << this->diameter.std() << ")\n";
+                std::cerr << "Acceptance angle mean/std degrees: "
+                          << this->acceptance_angle.mean() * sm::mathconst<float>::rad2deg
+                          << " (" << this->acceptance_angle.std() * sm::mathconst<float>::rad2deg << ")\n";
+                // FOV
+                // Find mean direction
+                sm::vec<float> mean_dir = {};
+                for (auto ori : this->orientation) {
+                    sm::vec<float> orient = ori;
+                    orient.renormalize();
+                    mean_dir += orient;
+                }
+                mean_dir /= this->orientation.size();
+                sm::vvec<float> ang_from_mean;
+                for (auto ori : this->orientation) {
+                    auto a = ori.angle (mean_dir);
+                    ang_from_mean.push_back (a);
+                }
+                std::cerr << "ang_from_mean max " << ang_from_mean.max() * sm::mathconst<float>::rad2deg << std::endl;
 
                 // Act on mirror planes and add to position arrays
                 if (!this->mirrorplanes.empty()) {
