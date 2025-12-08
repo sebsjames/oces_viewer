@@ -40,6 +40,7 @@ int main (int argc, char** argv)
 
     // Now view
     auto v = mplot::Visual<>(1024, 768, "mplot::compoundray::EyeVisual");
+    v.lightingEffects (true);
 
     // We read the information from the eye file into a vector of Ommatidium objects.  Ommatidium is
     // defined in "cameras/CompoundEyeDataTypes.h" in compound ray, mplot::Ommatidium is a
@@ -68,6 +69,7 @@ int main (int argc, char** argv)
         ommatidiaColours[i] = cm.convert (ommatidiaData[i]);
     }
 
+    oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
     auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(),
                                                                     &oces_reader.head_mesh);
     v.bindmodel (eyevm);
@@ -93,8 +95,11 @@ int main (int argc, char** argv)
                                          oces_reader.position.size() / 2, oces_reader.position.size());
     }
 
-    eyevm->show_sphere = true;
+    eyevm->show_sphere = false;
     eyevm->show_rays = true;
+    eyevm->show_cones = false;
+    eyevm->show_fov = false;
+    eyevm->pre_set_cone_length (0.005f);
     eyevm->finalize();
 
     [[maybe_unused]] auto ep = v.addVisualModel (eyevm);
