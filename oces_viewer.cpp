@@ -71,7 +71,7 @@ int main (int argc, char** argv)
 
     oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
     auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(),
-                                                                    &oces_reader.head_mesh);
+                                                                    reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh));
     v.bindmodel (eyevm);
     eyevm->name = "CompoundRay Eye";
     eyevm->show_cones = true;

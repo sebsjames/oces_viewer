@@ -11,8 +11,6 @@
 #include <sm/vec>
 #include <sm/mat44>
 
-#include <mplot/VisualCommon.h> // mplot::meshgroup
-
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -33,6 +31,20 @@ namespace oces
         sm::vec<float> normal = {1, 0, 0};
     };
 
+    // This struct matches the layout of mplot::meshgroup
+    struct meshgroup
+    {
+        std::string name;
+        sm::mat44<float> transform;
+        sm::vvec<uint32_t> indices;
+        sm::vvec<sm::vec<float>> positions;
+        sm::vvec<sm::vec<float>> normals;
+        sm::vvec<sm::vec<float>> colours;
+        sm::range<sm::vec<float>> object_aabb;
+        sm::range<sm::vec<float>> world_aabb;
+        std::array<float, 3> single_colour = {0};
+    };
+
     struct reader
     {
         std::string filename;
@@ -51,7 +63,7 @@ namespace oces
         std::vector<sm::mat44<float>> mirrors;
 
         // If we have a head mesh, store it here
-        mplot::meshgroup head_mesh;
+        oces::meshgroup head_mesh;
 
         reader (const std::string& _filename)
         {
