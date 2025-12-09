@@ -1,8 +1,12 @@
 # oces_viewer
 
-Open an OCES file and output the ommatidia data to stdout.
+A reader library `oces::reader` and a couple of programs for reading Open Compound Eye Standard (OCES) files.
 
-## Deps
+* **oces2cray** Opens an OCES file and outputs the ommatidia data in libcompound-ray eye file format to stdout
+* **oces_viewer** Opens an OCES file and visualizes the eye and head.
+
+
+## Dependencies
 
 Clone this with submodules. These include tinygltf and mathplot, which itself has a submodule
 
