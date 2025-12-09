@@ -471,7 +471,7 @@ namespace oces
                     std::cout << this->position[i].str_comma_separated (' ') << " "
                               << this->orientation[i].str_comma_separated (' ')
                               << " " << this->acceptance_angle[i]
-                              << " " << this->focal_offset[i]
+                              << " " << std::abs(this->focal_offset[i])
                               << std::endl;
                 }
             } else {
