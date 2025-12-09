@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <oces/reader>
+#define ARGS_NOEXCEPT 1
+#include <args/args.hxx>
 
 #include <mplot/Visual.h>
 #include <mplot/ColourMap.h>
@@ -14,26 +16,33 @@
 
 int main (int argc, char** argv)
 {
-    // Get user-provided info for the glTF file and any 2D projection sphere
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " path/to/oces_file.gltf [psradius] pscentre_x pscentre_y pscentre_z \n";
+    args::ArgumentParser aparser ("OCES viewer", "Have a nice day.");
+    args::ValueFlag<std::string> af_fname  (aparser, "filepath", "path/to/oces_file.gltf",       {'f'}); // make this required?
+    args::ValueFlag<float>       af_psrad  (aparser, "radius",   "The projection sphere radius", {'r'});
+    args::ValueFlag<std::string> af_centre (aparser, "centre",   "The projection sphere centre", {'c'});
+
+    aparser.ParseCLI (argc, argv);
+
+    std::string filename = "";
+    float psrad = 0.1f;
+    sm::vec<float> pscentre = { 0, 0, 0 };
+
+    if (af_fname) {
+        filename = args::get (af_fname);
+    } else {
+        std::cerr << aparser;
         return -1;
     }
-    std::string filename (argv[1]);
 
-    float psrad = 0.1f;
-    sm::vec<double> pscentre_d = { 0, 0, 0 };
-    //pscentre = { -0.0004, -0.0002, 0.0001 };
+    if (af_psrad) {
+        psrad = args::get (af_psrad);
+        std::cerr << "User-supplied projection sphere radius: " << psrad << std::endl;
+    }
 
-    if (argc > 2) {
-        psrad = std::atof (argv[2]);
-        std::cout << "User-supplied projection sphere radius: " << psrad << std::endl;
+    if (af_centre) {
+        pscentre.set_from_str (args::get (af_centre));
+        std::cerr << "User-supplied projection sphere centre: " << pscentre << std::endl;
     }
-    if (argc > 5) {
-        pscentre_d = { std::atof(argv[3]), std::atof(argv[4]), std::atof(argv[5]) };
-        std::cout << "User-supplied projection sphere centre: " << pscentre_d << std::endl;
-    }
-    sm::vec<float> pscentre = pscentre_d.as<float>();
 
     // Read
     oces::reader oces_reader (filename);
@@ -98,7 +107,7 @@ int main (int argc, char** argv)
     eyevm->show_sphere = false;
     eyevm->show_rays = true;
     eyevm->show_cones = false;
-    eyevm->show_fov = false;
+    eyevm->show_fov = true;
     eyevm->pre_set_cone_length (0.005f);
     eyevm->finalize();
 

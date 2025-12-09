@@ -4,3 +4,6 @@
 [submodule "extern/mathplot"]
 	path = extern/mathplot
 	url = htpps://github.com/sebsjames/mathplot
+[submodule "extern/args"]
+	path = extern/args
+	url = git@github.com:Taywee/args

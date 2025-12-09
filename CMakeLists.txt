@@ -27,7 +27,7 @@ include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.
 include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
 
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}) # oces/reader.h
+include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
 # View the eye with a mathplot-based program
 add_executable(oces_viewer oces_viewer.cpp)
