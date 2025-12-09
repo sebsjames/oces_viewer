@@ -65,6 +65,8 @@ namespace oces
         // If we have a head mesh, store it here
         oces::meshgroup head_mesh;
 
+        bool read_success = false;
+
         reader (const std::string& _filename)
         {
             this->filename = _filename;
@@ -81,9 +83,8 @@ namespace oces
             bool r_loader = loader.LoadASCIIFromFile (&model, &err, &warn, this->filename);
             if (!warn.empty()) { std::cerr << "glTF WARNING: " << warn << std::endl; }
             if (r_loader == false) {
-                std::stringstream ee;
-                ee << "Failed to load GLTF file '" << filename << "': " << err;
-                throw std::runtime_error (ee.str());
+                std::cerr << "Failed to load GLTF file '" << filename << std::endl;
+                return;
             }
 
             // We want to access extensions for the OCES stuff
@@ -318,6 +319,8 @@ namespace oces
                 auto& gltf_node = model.nodes[i];
                 this->process_node (model, gltf_node, root_transform);
             }
+
+            this->read_success = true;
         }
 
         /**
