@@ -19,7 +19,7 @@ int main (int argc, char** argv)
     args::ArgumentParser ap ("OCES viewer", "Have a nice day.");
 
     args::ValueFlag<std::string> a_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'});
-    args::ValueFlag<float>       a_psrad  (ap, "radius",   "The projection sphere radius (numeric value), {'r'});
+    args::ValueFlag<float>       a_psrad  (ap, "radius",   "The projection sphere radius (numeric value)", {'r'});
     args::ValueFlag<std::string> a_centre (ap, "centre",   "The projection sphere centre (comma separated coordinates)", {'c'});
     args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
 
