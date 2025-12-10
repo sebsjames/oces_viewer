@@ -16,12 +16,12 @@
 
 int main (int argc, char** argv)
 {
-    args::ArgumentParser aparser ("OCES viewer", "Have a nice day.");
-    args::ValueFlag<std::string> af_fname  (aparser, "filepath", "path/to/oces_file.gltf",       {'f'}); // make this required?
-    args::ValueFlag<float>       af_psrad  (aparser, "radius",   "The projection sphere radius", {'r'});
-    args::ValueFlag<std::string> af_centre (aparser, "centre",   "The projection sphere centre", {'c'});
+    args::ArgumentParser ap ("OCES viewer", "Have a nice day.");
+    args::ValueFlag<std::string> af_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'}); // make this required?
+    args::ValueFlag<float>       af_psrad  (ap, "radius",   "The projection sphere radius", {'r'});
+    args::ValueFlag<std::string> af_centre (ap, "centre",   "The projection sphere centre", {'c'});
 
-    aparser.ParseCLI (argc, argv);
+    ap.ParseCLI (argc, argv);
 
     std::string filename = "";
     float psrad = 0.1f;
@@ -30,7 +30,7 @@ int main (int argc, char** argv)
     if (af_fname) {
         filename = args::get (af_fname);
     } else {
-        std::cerr << aparser;
+        std::cerr << ap;
         return -1;
     }
 
@@ -40,12 +40,13 @@ int main (int argc, char** argv)
     }
 
     if (af_centre) {
-        pscentre.set_from_str (args::get (af_centre));
+        pscentre.set_from (args::get (af_centre));
         std::cerr << "User-supplied projection sphere centre: " << pscentre << std::endl;
     }
 
     // Read
     oces::reader oces_reader (filename);
+    if (oces_reader.read_success == false) { return -1; }
 
     // Now view
     auto v = mplot::Visual<>(1024, 768, "mplot::compoundray::EyeVisual");
