@@ -17,9 +17,11 @@
 int main (int argc, char** argv)
 {
     args::ArgumentParser ap ("OCES viewer", "Have a nice day.");
+
     args::ValueFlag<std::string> af_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'}); // make this required?
     args::ValueFlag<float>       af_psrad  (ap, "radius",   "The projection sphere radius", {'r'});
     args::ValueFlag<std::string> af_centre (ap, "centre",   "The projection sphere centre", {'c'});
+    args::Flag af_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
 
     ap.ParseCLI (argc, argv);
 
@@ -108,7 +110,12 @@ int main (int argc, char** argv)
     eyevm->show_sphere = false;
     eyevm->show_rays = true;
     eyevm->show_cones = false;
-    eyevm->show_fov = true;
+    if (af_fov) {
+        // show field of view
+        eyevm->show_fov = true;
+    } else {
+        eyevm->show_fov = false;
+    }
     eyevm->pre_set_cone_length (0.005f);
     eyevm->finalize();
 
