@@ -18,10 +18,10 @@ int main (int argc, char** argv)
 {
     args::ArgumentParser ap ("OCES viewer", "Have a nice day.");
 
-    args::ValueFlag<std::string> af_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'}); // make this required?
-    args::ValueFlag<float>       af_psrad  (ap, "radius",   "The projection sphere radius", {'r'});
-    args::ValueFlag<std::string> af_centre (ap, "centre",   "The projection sphere centre", {'c'});
-    args::Flag af_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
+    args::ValueFlag<std::string> a_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'});
+    args::ValueFlag<float>       a_psrad  (ap, "radius",   "The projection sphere radius (numeric value), {'r'});
+    args::ValueFlag<std::string> a_centre (ap, "centre",   "The projection sphere centre (comma separated coordinates)", {'c'});
+    args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
 
     ap.ParseCLI (argc, argv);
 
@@ -29,20 +29,20 @@ int main (int argc, char** argv)
     float psrad = 0.1f;
     sm::vec<float> pscentre = { 0, 0, 0 };
 
-    if (af_fname) {
-        filename = args::get (af_fname);
+    if (a_fname) {
+        filename = args::get (a_fname);
     } else {
         std::cerr << ap;
         return -1;
     }
 
-    if (af_psrad) {
-        psrad = args::get (af_psrad);
+    if (a_psrad) {
+        psrad = args::get (a_psrad);
         std::cerr << "User-supplied projection sphere radius: " << psrad << std::endl;
     }
 
-    if (af_centre) {
-        pscentre.set_from (args::get (af_centre));
+    if (a_centre) {
+        pscentre.set_from (args::get (a_centre));
         std::cerr << "User-supplied projection sphere centre: " << pscentre << std::endl;
     }
 
@@ -110,7 +110,7 @@ int main (int argc, char** argv)
     eyevm->show_sphere = false;
     eyevm->show_rays = true;
     eyevm->show_cones = false;
-    if (af_fov) {
+    if (a_fov) {
         // show field of view
         eyevm->show_fov = true;
     } else {
