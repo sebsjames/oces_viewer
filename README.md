@@ -5,6 +5,8 @@ A reader library `oces::reader` and a couple of programs for reading Open Compou
 * **oces2cray** Opens an OCES file and outputs the ommatidia data in libcompound-ray eye file format to stdout
 * **oces_viewer** Opens an OCES file and visualizes the eye and head.
 
+![Screenshot of Velox head and eyes](https://github.com/sebsjames/oces_viewer/blob/main/data/velox-head.png?raw=true)
+
 
 ## Dependencies
 
