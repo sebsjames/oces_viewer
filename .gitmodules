@@ -3,7 +3,7 @@
 	url = https://github.com/syoyo/tinygltf
 [submodule "extern/mathplot"]
 	path = extern/mathplot
-	url = htpps://github.com/sebsjames/mathplot
+	url = https://github.com/sebsjames/mathplot
 [submodule "extern/args"]
 	path = extern/args
-	url = git@github.com:Taywee/args
+	url = https://github.com/Taywee/args
