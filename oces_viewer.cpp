@@ -6,7 +6,7 @@
 #include <string>
 #include <oces/reader>
 #define ARGS_NOEXCEPT 1
-#include <args/args.hxx>
+#include <args/args.hxx> // github.com/Taywee/args
 
 #include <mplot/Visual.h>
 #include <mplot/ColourMap.h>
@@ -21,13 +21,19 @@ int main (int argc, char** argv)
     args::ValueFlag<std::string> a_fname  (ap, "filepath", "path/to/oces_file.gltf",       {'f'});
     args::ValueFlag<float>       a_psrad  (ap, "radius",   "The projection sphere radius (numeric value)", {'r'});
     args::ValueFlag<std::string> a_centre (ap, "centre",   "The projection sphere centre (comma separated coordinates)", {'c'});
+    args::ValueFlag<std::string> a_psrax (ap, "psrax",   "The projection sphere rotation axis (comma separated coordinates)", {'x'});
+    args::ValueFlag<float>       a_psr  (ap, "psr",   "The projection sphere rotation radians (numeric value)", {'o'});
+    args::ValueFlag<std::string> a_proj (ap, "proj",   "The projection type (equirectangular, mercator or cassini)", {'p'});
     args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
+    args::Flag a_hidehead (ap, "hidehead", "Hide the head, even if it was read from OCES file", {'i', "hidehead"});
 
     ap.ParseCLI (argc, argv);
 
     std::string filename = "";
     float psrad = 0.1f;
     sm::vec<float> pscentre = { 0, 0, 0 };
+    float psr = 0.0f;
+    sm::vec<float> psrax = { 0, 1, 0 };
 
     if (a_fname) {
         filename = args::get (a_fname);
@@ -44,6 +50,22 @@ int main (int argc, char** argv)
     if (a_centre) {
         pscentre.set_from (args::get (a_centre));
         std::cerr << "User-supplied projection sphere centre: " << pscentre << std::endl;
+    }
+
+    if (a_psrax) {
+        psrax.set_from (args::get (a_psrax));
+        std::cerr << "User-supplied projection rotation axis: " << psrax << std::endl;
+    }
+
+    if (a_psr) {
+        psr = args::get (a_psr);
+        std::cerr << "User-supplied projection rotation radians: " << psr << std::endl;
+    }
+
+    std::string projstr = "equirectangular";
+    if (a_proj) {
+        projstr = args::get (a_proj);
+        std::cerr << "User-supplied projection type: " << projstr << std::endl;
     }
 
     // Read
@@ -81,16 +103,23 @@ int main (int argc, char** argv)
         ommatidiaColours[i] = cm.convert (ommatidiaData[i]);
     }
 
+    mplot::meshgroup* head_mesh_ptr = nullptr;
+    if (!a_hidehead) { head_mesh_ptr = reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh); }
+
     oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
-    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(),
-                                                                    reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh));
+    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(), head_mesh_ptr);
     v.bindmodel (eyevm);
     eyevm->name = "CompoundRay Eye";
     eyevm->show_cones = true;
 
     [[maybe_unused]] auto ptype = mplot::compoundray::EyeVisual<>::projection_type::equirectangular; // mercator, equirectangular or cassini
-    [[maybe_unused]] sm::mat44<float> twod_tr;
-    twod_tr.scale (sm::vec<>{4, 1, 1});
+    if (projstr.find ("merc") != std::string::npos) {
+        ptype = mplot::compoundray::EyeVisual<>::projection_type::mercator;
+    } else if (projstr.find ("cass") != std::string::npos) {
+        ptype = mplot::compoundray::EyeVisual<>::projection_type::cassini;
+    }
+    sm::mat44<float> twod_tr;
+    twod_tr.translate (sm::vec<>{0,0.0004,0});
 #if 0
     auto prange = sm::range<sm::vec<float, 3>>::search_initialized();
     for (auto p : oces_reader.position) { prange.update (p); }
@@ -98,12 +127,13 @@ int main (int argc, char** argv)
     twod_tr.translate (pspan / 4);
 #endif
     // To avoid 2D, don't add spherical projections
-    eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad,
-                                     0, oces_reader.position.size() / 2);
+    std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
+    sm::quaternion<float> psrotn (psrax, psr);
+    eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn, 0, oces_reader.position.size() / 2);
     if (oces_reader.mirrors.empty() == false) {
         pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
         std::cout << "New centre: " << pscentre << std::endl;
-        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad,
+        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
                                          oces_reader.position.size() / 2, oces_reader.position.size());
     }
 
