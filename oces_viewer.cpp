@@ -26,6 +26,8 @@ int main (int argc, char** argv)
     args::ValueFlag<std::string> a_proj (ap, "proj",   "The projection type (equirectangular, mercator or cassini)", {'p'});
     args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
     args::Flag a_hidehead (ap, "hidehead", "Hide the head, even if it was read from OCES file", {'i', "hidehead"});
+    args::Flag a_showsphere (ap, "showsphere", "Show the 2D projection sphere", {'s', "showsphere"});
+    args::Flag a_showrays (ap, "showrays", "Show the 2D ommatidia projection rays", {'y', "showrays"});
 
     ap.ParseCLI (argc, argv);
 
@@ -137,15 +139,10 @@ int main (int argc, char** argv)
                                          oces_reader.position.size() / 2, oces_reader.position.size());
     }
 
-    eyevm->show_sphere = false;
-    eyevm->show_rays = true;
+    eyevm->show_sphere = (a_showsphere ? true : false);
+    eyevm->show_rays = (a_showrays ? true : false);
     eyevm->show_cones = false;
-    if (a_fov) {
-        // show field of view
-        eyevm->show_fov = true;
-    } else {
-        eyevm->show_fov = false;
-    }
+    eyevm->show_fov = (a_fov ? true : false);
     eyevm->pre_set_cone_length (0.005f);
     eyevm->finalize();
 
