@@ -2,7 +2,7 @@
 
 # Command to view velox-head.gltf:
 
-pushd build && make && popd  &&  ./build/oces_viewer -f data/velox-head.gltf -r 0.0002 -c -0.00056,0,-0.00005 -x1,0,0 -o0.1 -s -y
+pushd build && make && popd  &&  ./build/oces_viewer -f data/velox-head.gltf -r 0.0002 -c -0.00056,0.00005,-0.00005 -x1,0,0 -o0.2 -s -y
 
 # Argument description:
 #

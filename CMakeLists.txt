@@ -18,6 +18,7 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(Armadillo REQUIRED) # For Voronoi 2D eye visuals
 # include files for graphics
 set(MPLOT_INC_EXTRA ${ARMADILLO_INCLUDE_DIR} ${ARMADILLO_INCLUDE_DIRS} ${HDF5_INCLUDE_DIR})
 include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS})
@@ -31,7 +32,7 @@ include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
 # View the eye with a mathplot-based program
 add_executable(oces_viewer oces_viewer.cpp)
-target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
+target_link_libraries(oces_viewer ${ARMADILLO_LIBRARY} ${ARMADILLO_LIBRARIES} OpenGL::GL Freetype::Freetype glfw)
 
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
