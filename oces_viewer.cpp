@@ -22,6 +22,7 @@ int main (int argc, char** argv)
     args::ValueFlag<float>       a_psrad  (ap, "radius",   "The projection sphere radius (numeric value)", {'r'});
     args::ValueFlag<std::string> a_centre (ap, "centre",   "The projection sphere centre (comma separated coordinates)", {'c'});
     args::ValueFlag<std::string> a_psrax (ap, "psrax",   "The projection sphere rotation axis (comma separated coordinates)", {'x'});
+    args::ValueFlag<std::string> a_2dshift (ap, "twodshift",   "A translation of the 2d right eye (comma separated coordinates, mirrored for left eye)", {'d'});
     args::ValueFlag<float>       a_psr  (ap, "psr",   "The projection sphere rotation radians (numeric value)", {'o'});
     args::ValueFlag<std::string> a_proj (ap, "proj",   "The projection type (equirectangular, mercator or cassini)", {'p'});
     args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
@@ -36,6 +37,9 @@ int main (int argc, char** argv)
     sm::vec<float> pscentre = { 0, 0, 0 };
     float psr = 0.0f;
     sm::vec<float> psrax = { 0, 1, 0 };
+    sm::vec<> twod_shift = { -0.0005, 0.0006, 0 }; // A shift of the twod representation of the
+                                                   // right eye (the purple one in the example
+                                                   // velox-head filef)
 
     if (a_fname) {
         filename = args::get (a_fname);
@@ -57,6 +61,11 @@ int main (int argc, char** argv)
     if (a_psrax) {
         psrax.set_from (args::get (a_psrax));
         std::cerr << "User-supplied projection rotation axis: " << psrax << std::endl;
+    }
+
+    if (a_2dshift) {
+        twod_shift.set_from (args::get (a_2dshift));
+        std::cerr << "User-supplied 2D eye shift: " << twod_shift << std::endl;
     }
 
     if (a_psr) {
@@ -120,14 +129,10 @@ int main (int argc, char** argv)
     } else if (projstr.find ("cass") != std::string::npos) {
         ptype = mplot::compoundray::EyeVisual<>::projection_type::cassini;
     }
+
     sm::mat44<float> twod_tr;
-    twod_tr.translate (sm::vec<>{0,0.0004,0});
-#if 0
-    auto prange = sm::range<sm::vec<float, 3>>::search_initialized();
-    for (auto p : oces_reader.position) { prange.update (p); }
-    auto pspan = prange.span();
-    twod_tr.translate (pspan / 4);
-#endif
+    twod_tr.translate (twod_shift);
+
     // To avoid 2D, don't add spherical projections
     std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
     sm::quaternion<float> psrotn (psrax, psr);
@@ -135,6 +140,11 @@ int main (int argc, char** argv)
     if (oces_reader.mirrors.empty() == false) {
         pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
         std::cout << "New centre: " << pscentre << std::endl;
+
+        sm::vec<> twod_shift_left = twod_shift;
+        twod_shift_left[0] *= -1.0f;
+        twod_tr.setToIdentity();
+        twod_tr.translate (twod_shift_left);
         eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
                                          oces_reader.position.size() / 2, oces_reader.position.size());
     }
