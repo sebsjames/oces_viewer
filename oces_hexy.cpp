@@ -76,6 +76,12 @@ int main (int argc, char** argv)
     eyevm->finalize();
     auto ep = v.addVisualModel (eyevm);
     ep->scaleViewMatrix (1000.0f);
+
+    // Now find that HexGrid.
+
+    // What's the mean position of the ommatidia? What's the 'normal' of the eye? We'll start with a
+    // flat HexGrid whose plane is defined by this normal. Best fit ellipsoid?
+
     v.keepOpen();
 
     return 0;
