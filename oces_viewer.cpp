@@ -11,7 +11,6 @@
 #include <mplot/Visual.h>
 #include <mplot/ColourMap.h>
 #include <mplot/SphereVisual.h>
-#include <mplot/VectorVisual.h>
 #include <mplot/compoundray/EyeVisual.h>
 
 int main (int argc, char** argv)
