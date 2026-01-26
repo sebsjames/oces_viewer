@@ -33,5 +33,8 @@ include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 add_executable(oces_viewer oces_viewer.cpp)
 target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
 
+add_executable(oces_hexy oces_hexy.cpp)
+target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw)
+
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
