@@ -9,7 +9,7 @@
 
 #include <sm/vvec>
 #include <sm/vec>
-#include <sm/mat44>
+#include <sm/mat>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -35,7 +35,7 @@ namespace oces
     struct meshgroup
     {
         std::string name;
-        sm::mat44<float> transform;
+        sm::mat<float, 4> transform;
         sm::vvec<uint32_t> indices;
         sm::vvec<sm::vec<float>> positions;
         sm::vvec<sm::vec<float>> normals;
@@ -60,7 +60,7 @@ namespace oces
         // A second eye may be mirrored by a mirrorplane
         std::vector<oces::mirrorplane> mirrorplanes;
         // Store the matrix for the mirrors defined in mirrorplanes
-        std::vector<sm::mat44<float>> mirrors;
+        std::vector<sm::mat<float, 4>> mirrors;
 
         // If we have a head mesh, store it here
         oces::meshgroup head_mesh;
@@ -291,7 +291,7 @@ namespace oces
                     this->diameter.resize (2 * sz);
                     this->acceptance_angle.resize (2 * sz);
 
-                    sm::mat44<float> mirror = sm::mat44<float>::reflection (this->mirrorplanes[0].position, this->mirrorplanes[0].normal);
+                    sm::mat<float, 4> mirror = sm::mat<float, 4>::reflection (this->mirrorplanes[0].position, this->mirrorplanes[0].normal);
                     this->mirrors.push_back (mirror); // Saved for client code to use
                     for (size_t i = 0; i < sz; ++i) {
                         // Mirror position and direction
@@ -308,7 +308,7 @@ namespace oces
             }
 
             // Process nodes (to get the head mesh)
-            sm::mat44<float> root_transform;
+            sm::mat<float, 4> root_transform;
             std::vector<int32_t> root_nodes (model.nodes.size(), 1);
             for (auto& gltf_node : model.nodes) {
                 for (int32_t child : gltf_node.children) { root_nodes[child] = 0; }
@@ -375,32 +375,32 @@ namespace oces
         }
 
         // Process nodes to read head mesh
-        void process_node (const tinygltf::Model& model, const tinygltf::Node& gltf_node, const sm::mat44<float>& parent_matrix)
+        void process_node (const tinygltf::Model& model, const tinygltf::Node& gltf_node, const sm::mat<float, 4>& parent_matrix)
         {
             constexpr bool debug_gltf = true;
 
             std::cerr << "Process node " << gltf_node.name << std::endl;
 
-            sm::mat44<float> translation;
+            sm::mat<float, 4> translation;
             if (!gltf_node.translation.empty()) {
                 auto tr = sm::vec<double>{ gltf_node.translation[0], gltf_node.translation[1], gltf_node.translation[2] };
                 sm::vec<float> trf = tr.as<float>();
                 translation.translate (trf);
             }
-            sm::mat44<float> rotation;
+            sm::mat<float, 4> rotation;
             if (!gltf_node.rotation.empty()) {
                 sm::quaternion<double> q(gltf_node.rotation[3], gltf_node.rotation[0], gltf_node.rotation[1], gltf_node.rotation[2]);
                 rotation.rotate (q);
             }
-            sm::mat44<float> scale;
+            sm::mat<float, 4> scale;
             if (!gltf_node.scale.empty()) {
                 scale.scale (sm::vec<double>({ gltf_node.scale[0], gltf_node.scale[1], gltf_node.scale[2] }).as<float>());
             }
-            sm::mat44<float> matrix;
+            sm::mat<float, 4> matrix;
             if (!gltf_node.matrix.empty()) {
-                for (uint32_t i = 0; i < 16; ++i) { matrix.mat[i] = static_cast<float>(gltf_node.matrix[i]); }
+                for (uint32_t i = 0; i < 16; ++i) { matrix.arr[i] = static_cast<float>(gltf_node.matrix[i]); }
             }
-            const sm::mat44<float> node_xform = parent_matrix * matrix * translation * rotation * scale;
+            const sm::mat<float, 4> node_xform = parent_matrix * matrix * translation * rotation * scale;
 
             if (gltf_node.mesh != -1) {
                 const auto& gltf_mesh = model.meshes[gltf_node.mesh];

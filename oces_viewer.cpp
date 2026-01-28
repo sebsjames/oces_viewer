@@ -129,7 +129,7 @@ int main (int argc, char** argv)
         ptype = mplot::compoundray::EyeVisual<>::projection_type::cassini;
     }
 
-    sm::mat44<float> twod_tr;
+    sm::mat<float, 4> twod_tr;
     twod_tr.translate (twod_shift);
 
     // To avoid 2D, don't add spherical projections
@@ -142,7 +142,7 @@ int main (int argc, char** argv)
 
         sm::vec<> twod_shift_left = twod_shift;
         twod_shift_left[0] *= -1.0f;
-        twod_tr.setToIdentity();
+        twod_tr.set_identity();
         twod_tr.translate (twod_shift_left);
         eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
                                          oces_reader.position.size() / 2, oces_reader.position.size());
