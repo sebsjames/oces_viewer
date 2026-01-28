@@ -11,6 +11,7 @@
 #include <mplot/Visual.h>
 #include <mplot/ColourMap.h>
 #include <mplot/SphereVisual.h>
+#include <mplot/ColourBarVisual.h>
 #include <mplot/compoundray/EyeVisual.h>
 
 int main (int argc, char** argv)
@@ -113,6 +114,23 @@ int main (int argc, char** argv)
         ommatidiaColours[i] = cm.convert (ommatidiaData[i]);
     }
 
+    // Place a colour bar for the ommtidia index
+    if (!a_fov) {
+        auto cbv = std::make_unique<mplot::ColourBarVisual<float>>(sm::vec<>{0.6f,-1,0});
+        v.bindmodel (cbv);
+        cbv->orientation = mplot::colourbar_orientation::horizontal;
+        cbv->tickside = mplot::colourbar_tickside::right_or_below;
+        cbv->cm = cm;
+        cbv->width = 0.08f;
+        cbv->length = 0.5f;
+        cbv->tf.fontsize = 0.04f;
+        cbv->scale.compute_scaling (0.0f, static_cast<float>(ommatidia->size() - 1));
+        cbv->addLabel ("Index 0-" + std::to_string (ommatidia->size() - 1),
+                       sm::vec<>{0, 0.15f, 0}, mplot::TextFeatures(0.05f));
+        cbv->finalize();
+        v.addVisualModel (cbv);
+    }
+
     mplot::meshgroup* head_mesh_ptr = nullptr;
     if (!a_hidehead) { head_mesh_ptr = reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh); }
 
@@ -132,22 +150,23 @@ int main (int argc, char** argv)
     sm::mat<float, 4> twod_tr;
     twod_tr.translate (twod_shift);
 
-    // To avoid 2D, don't add spherical projections
-    std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
-    sm::quaternion<float> psrotn (psrax, psr);
-    eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn, 0, oces_reader.position.size() / 2);
-    if (oces_reader.mirrors.empty() == false) {
-        pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
-        std::cout << "New centre: " << pscentre << std::endl;
+    if (a_psrad) {
+        // To avoid 2D, don't add spherical projections
+        std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
+        sm::quaternion<float> psrotn (psrax, psr);
+        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn, 0, oces_reader.position.size() / 2);
+        if (oces_reader.mirrors.empty() == false) {
+            pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
+            std::cout << "New centre: " << pscentre << std::endl;
 
-        sm::vec<> twod_shift_left = twod_shift;
-        twod_shift_left[0] *= -1.0f;
-        twod_tr.set_identity();
-        twod_tr.translate (twod_shift_left);
-        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
-                                         oces_reader.position.size() / 2, oces_reader.position.size());
+            sm::vec<> twod_shift_left = twod_shift;
+            twod_shift_left[0] *= -1.0f;
+            twod_tr.set_identity();
+            twod_tr.translate (twod_shift_left);
+            eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
+                                             oces_reader.position.size() / 2, oces_reader.position.size());
+        }
     }
-
     eyevm->show_sphere = (a_showsphere ? true : false);
     eyevm->show_rays = (a_showrays ? true : false);
     eyevm->show_cones = false;
