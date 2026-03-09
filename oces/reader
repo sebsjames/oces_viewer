@@ -7,9 +7,9 @@
 #include <string>
 #include <sstream>
 
-#include <sm/vvec>
-#include <sm/vec>
-#include <sm/mat>
+import sm.vvec;
+import sm.vec;
+import sm.mat;
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
