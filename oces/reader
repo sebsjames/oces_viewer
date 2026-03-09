@@ -1,4 +1,6 @@
 // -*- C++ -*-
+module;
+
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -6,10 +8,6 @@
 #include <stdexcept>
 #include <string>
 #include <sstream>
-
-import sm.vvec;
-import sm.vec;
-import sm.mat;
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -23,7 +21,13 @@ import sm.mat;
 #pragma warning( pop )
 #endif
 
-namespace oces
+export module oces.reader;
+
+export import sm.vvec;
+export import sm.vec;
+export import sm.mat;
+
+export namespace oces
 {
     struct mirrorplane
     {
