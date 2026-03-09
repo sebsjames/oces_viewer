@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#define OCES_READER_IMPLEMENTATION 1
 #include <oces/reader>
 #define ARGS_NOEXCEPT 1
 #include <args/args.hxx> // github.com/Taywee/args

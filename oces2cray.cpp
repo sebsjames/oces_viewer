@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#define OCES_READER_IMPLEMENTATION 1
 #include <oces/reader>
 
 int main (int argc, char** argv)
