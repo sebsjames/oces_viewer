@@ -38,3 +38,5 @@ target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw)
 
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
+
+add_library(oces_reader reader_lib.cpp)
