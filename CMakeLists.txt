@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(oces_viewer)
+cmake_minimum_required(VERSION 3.28.5)
+project(oces_viewer LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 20)
 
 if (APPLE)
@@ -29,6 +29,23 @@ include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h t
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
+# OCES (this code)
+set_source_files_properties (
+  ${PROJECT_SOURCE_DIR}/oces/reader
+  PROPERTIES LANGUAGE CXX
+)
+
+# sebsjames/maths
+set(MATHS_MODULES
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/range
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/random
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/vec
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/vvec
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/quaternion
+  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/mat
+)
+set_source_files_properties (${MATHS_MODULES} PROPERTIES LANGUAGE CXX)
+
 # View the eye with a mathplot-based program
 add_executable(oces_viewer oces_viewer.cpp)
 target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
@@ -38,3 +55,8 @@ target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw)
 
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
+target_sources(oces2cray PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES
+  ${PROJECT_SOURCE_DIR}/oces/reader
+  ${MATHS_MODULES}
+)
