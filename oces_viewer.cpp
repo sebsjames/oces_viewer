@@ -2,17 +2,17 @@
  * Read OCES file then display with mathplot::compoundray::EyeVisual
  */
 
+#include <memory>
 #include <iostream>
 #include <string>
-#include <oces/reader>
 #define ARGS_NOEXCEPT 1
 #include <args/args.hxx> // github.com/Taywee/args
 
-#include <mplot/Visual.h>
-#include <mplot/ColourMap.h>
-#include <mplot/SphereVisual.h>
-#include <mplot/ColourBarVisual.h>
-#include <mplot/compoundray/EyeVisual.h>
+import oces.reader;
+import mplot.visual;
+import mplot.spherevisual;
+import mplot.colourbarvisual;
+import mplot.compoundray.eyevisual;
 
 int main (int argc, char** argv)
 {
@@ -117,7 +117,7 @@ int main (int argc, char** argv)
     // Place a colour bar for the ommtidia index
     if (!a_fov) {
         auto cbv = std::make_unique<mplot::ColourBarVisual<float>>(sm::vec<>{0.6f,-1,0});
-        v.bindmodel (cbv);
+        cbv->set_parent (v.get_id());
         cbv->orientation = mplot::colourbar_orientation::horizontal;
         cbv->tickside = mplot::colourbar_tickside::right_or_below;
         cbv->cm = cm;
@@ -136,7 +136,7 @@ int main (int argc, char** argv)
 
     oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
     auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(), head_mesh_ptr);
-    v.bindmodel (eyevm);
+    eyevm->set_parent (v.get_id());
     eyevm->name = "CompoundRay Eye";
     eyevm->show_cones = true;
 

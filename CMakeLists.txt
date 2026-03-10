@@ -29,34 +29,95 @@ include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h t
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
+# For viewer programs that use mathplot, we have to compile libglad and libmathplot_fonts
+add_library(glad STATIC ${MPLOT_INCLUDE_PATH}/mplot/glad/gl.c)
+add_library(mplot_fontdata STATIC ${MPLOT_INCLUDE_PATH}/mplot/VisualFaceAsm.cpp)
+
 # OCES (this code)
-set_source_files_properties (
-  ${PROJECT_SOURCE_DIR}/oces/reader
-  PROPERTIES LANGUAGE CXX
-)
+set(MY_MODULES ${PROJECT_SOURCE_DIR}/oces/reader)
+set_source_files_properties (${MY_MODULES} PROPERTIES LANGUAGE CXX)
 
 # sebsjames/maths
 set(MATHS_MODULES
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/range
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/random
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/vec
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/vvec
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/quaternion
-  ${PROJECT_SOURCE_DIR}/extern/mathplot/maths/sm/mat
+  ${MPLOT_INCLUDE_PATH}/maths/sm/range
+  ${MPLOT_INCLUDE_PATH}/maths/sm/random
+  ${MPLOT_INCLUDE_PATH}/maths/sm/vec
+  ${MPLOT_INCLUDE_PATH}/maths/sm/vvec
+  ${MPLOT_INCLUDE_PATH}/maths/sm/quaternion
+  ${MPLOT_INCLUDE_PATH}/maths/sm/mat
 )
 set_source_files_properties (${MATHS_MODULES} PROPERTIES LANGUAGE CXX)
 
+set(MATHPLOT_MATHS_MODULES
+  ${MPLOT_INCLUDE_PATH}/maths/sm/util
+  ${MPLOT_INCLUDE_PATH}/maths/sm/scale
+  ${MPLOT_INCLUDE_PATH}/maths/sm/flags
+  ${MPLOT_INCLUDE_PATH}/maths/sm/algo
+  ${MPLOT_INCLUDE_PATH}/maths/sm/geometry
+  ${MPLOT_INCLUDE_PATH}/maths/sm/geometry_polyhedra
+  ${MPLOT_INCLUDE_PATH}/maths/sm/crc32
+  ${MPLOT_INCLUDE_PATH}/maths/sm/base64
+  ${MPLOT_INCLUDE_PATH}/maths/sm/centroid
+  ${MPLOT_INCLUDE_PATH}/maths/sm/winder
+)
+set_source_files_properties (${MATHPLOT_MATHS_MODULES} PROPERTIES LANGUAGE CXX)
+
+# mathplot
+set(MATHPLOT_CORE_MODULES
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualOwnable.h
+  ${MPLOT_INCLUDE_PATH}/mplot/Visual.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualGlfw.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualFace.h
+  ${MPLOT_INCLUDE_PATH}/mplot/TextFeatures.h
+  ${MPLOT_INCLUDE_PATH}/mplot/TextGeometry.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualResources.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualCommon.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualFont.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualTextModel.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualModel.h
+  ${MPLOT_INCLUDE_PATH}/mplot/VisualDataModel.h
+  ${MPLOT_INCLUDE_PATH}/mplot/NavMesh.h
+  ${MPLOT_INCLUDE_PATH}/mplot/ColourMap.h
+  ${MPLOT_INCLUDE_PATH}/mplot/colourmaps_cet.h
+  ${MPLOT_INCLUDE_PATH}/mplot/colourmaps_crameri.h
+  ${MPLOT_INCLUDE_PATH}/mplot/ColourMap_Lists.h
+  ${MPLOT_INCLUDE_PATH}/mplot/CoordArrows.h
+  ${MPLOT_INCLUDE_PATH}/mplot/win_t.h
+  ${MPLOT_INCLUDE_PATH}/mplot/colour.h
+  ${MPLOT_INCLUDE_PATH}/mplot/tools.h
+  ${MPLOT_INCLUDE_PATH}/mplot/gl/version.h
+  ${MPLOT_INCLUDE_PATH}/mplot/gl/util_mx.h
+  ${MPLOT_INCLUDE_PATH}/mplot/graphing.h
+  ${MPLOT_INCLUDE_PATH}/mplot/graphstyles.h
+  ${MPLOT_INCLUDE_PATH}/mplot/DatasetStyle.h
+)
+set_source_files_properties (${MATHPLOT_CORE_MODULES} PROPERTIES LANGUAGE CXX)
+
+set(MATHPLOT_VM_MODULES
+  ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.h
+  ${MPLOT_INCLUDE_PATH}/mplot/ColourBarVisual.h
+  ${MPLOT_INCLUDE_PATH}/mplot/compoundray/EyeVisual.h
+)
+set_source_files_properties (${MATHPLOT_VM_MODULES} PROPERTIES LANGUAGE CXX)
+
 # View the eye with a mathplot-based program
 add_executable(oces_viewer oces_viewer.cpp)
-target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
+target_sources(oces_viewer
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${MY_MODULES} ${MATHS_MODULES} ${MATHPLOT_MATHS_MODULES} ${MATHPLOT_CORE_MODULES} ${MATHPLOT_VM_MODULES}
+)
+target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
 add_executable(oces_hexy oces_hexy.cpp)
-target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw)
+target_sources(oces_hexy
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${MY_MODULES} ${MATHS_MODULES} ${MATHPLOT_MATHS_MODULES} ${MATHPLOT_CORE_MODULES} ${MATHPLOT_VM_MODULES}
+)
+target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
-target_sources(oces2cray PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES
-  ${PROJECT_SOURCE_DIR}/oces/reader
-  ${MATHS_MODULES}
+target_sources(oces2cray
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${MY_MODULES} ${MATHS_MODULES}
 )
