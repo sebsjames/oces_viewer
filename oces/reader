@@ -9,8 +9,6 @@ module;
 #include <string>
 #include <sstream>
 
-#include <sm/mathconst>
-
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -25,6 +23,7 @@ module;
 
 export module oces.reader;
 
+export import sm.mathconst;
 export import sm.vvec;
 export import sm.vec;
 export import sm.mat;

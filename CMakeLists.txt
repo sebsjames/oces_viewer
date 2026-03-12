@@ -39,6 +39,8 @@ set_source_files_properties (${MY_MODULES} PROPERTIES LANGUAGE CXX)
 
 # sebsjames/maths
 set(MATHS_MODULES
+  ${MPLOT_INCLUDE_PATH}/maths/sm/mathconst
+  ${MPLOT_INCLUDE_PATH}/maths/sm/constexpr_math
   ${MPLOT_INCLUDE_PATH}/maths/sm/range
   ${MPLOT_INCLUDE_PATH}/maths/sm/random
   ${MPLOT_INCLUDE_PATH}/maths/sm/vec
@@ -85,6 +87,8 @@ set(MATHPLOT_CORE_MODULES
   ${MPLOT_INCLUDE_PATH}/mplot/win_t.h
   ${MPLOT_INCLUDE_PATH}/mplot/colour.h
   ${MPLOT_INCLUDE_PATH}/mplot/tools.h
+  ${MPLOT_INCLUDE_PATH}/mplot/unicode.h
+  ${MPLOT_INCLUDE_PATH}/mplot/loadpng.h
   ${MPLOT_INCLUDE_PATH}/mplot/gl/version.h
   ${MPLOT_INCLUDE_PATH}/mplot/gl/util_mx.h
   ${MPLOT_INCLUDE_PATH}/mplot/graphing.h
