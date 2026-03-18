@@ -72,7 +72,15 @@ export namespace oces
 
         bool read_success = false;
 
+        reader() {}
+
         reader (const std::string& _filename)
+        {
+            this->filename = _filename;
+            this->read();
+        }
+
+        void read (const std::string& _filename)
         {
             this->filename = _filename;
             this->read();
