@@ -8,6 +8,7 @@
 #define ARGS_NOEXCEPT 1
 #include <args/args.hxx> // github.com/Taywee/args
 
+import sm.geometry;
 import oces.reader;
 import mplot.visual;
 import mplot.spherevisual;
@@ -82,6 +83,31 @@ int main (int argc, char** argv)
     // Read
     oces::reader oces_reader (filename);
     if (oces_reader.read_success == false) { return -1; }
+
+    // FOV max
+    auto horz_fov = sm::range<float>::search_initialized();
+    auto vert_fov = sm::range<float>::search_initialized();
+    std::cout << "We have " << oces_reader.orientation.size()/2 << " orientations\n";
+    for (std::uint32_t i = 0; i < oces_reader.orientation.size() / 2; ++i) {
+        auto onto_y_i = sm::geometry::vector_plane_projection (oces_reader.orientation[i], sm::vec<>::uy()); // horz fov
+        auto onto_z_i = sm::geometry::vector_plane_projection (oces_reader.orientation[i], sm::vec<>::uz()); // vert fov
+        for (std::uint32_t j = 0; j < oces_reader.orientation.size() / 2; ++j) {
+            if (j != i) {
+                // project onto the plane
+                auto onto_y_j = sm::geometry::vector_plane_projection (oces_reader.orientation[j], sm::vec<>::uy()); // horz fov
+                auto onto_z_j = sm::geometry::vector_plane_projection (oces_reader.orientation[j], sm::vec<>::uz()); // vert fov
+
+                float horz_ang = onto_y_i.angle (onto_y_j);
+                float vert_ang = onto_z_i.angle (onto_z_j);
+                horz_fov.update (horz_ang);
+                vert_fov.update (vert_ang);
+            }
+        }
+    }
+    std::cout << "horz_fov range " << horz_fov << std::endl;
+    std::cout << "vert_fov range " << vert_fov << std::endl;
+    std::cout << "horz_fov range max " << (horz_fov.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
+    std::cout << "vert_fov range max " << (vert_fov.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
 
     // Now view
     auto v = mplot::Visual<>(1024, 768, "mplot::compoundray::EyeVisual");
