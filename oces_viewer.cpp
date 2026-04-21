@@ -12,6 +12,7 @@ import oces.reader;
 import mplot.visual;
 import mplot.spherevisual;
 import mplot.colourbarvisual;
+import mplot.quivervisual;
 import mplot.compoundray.eyevisual;
 
 int main (int argc, char** argv)
@@ -129,6 +130,27 @@ int main (int argc, char** argv)
                        sm::vec<>{0, 0.15f, 0}, mplot::TextFeatures(0.05f));
         cbv->finalize();
         v.addVisualModel (cbv);
+    }
+
+    // Quivers for projected angles
+    if (a_fov) {
+        auto qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.h_plane_position, sm::vec<>{-7, 0, 0},
+                                                                &oces_reader.h_plane_orientation,
+                                                                mplot::ColourMapType::MonochromeGreen);
+        qvh->set_parent (v.get_id());
+        qvh->quiver_length_gain = 4.0f;
+        qvh->quiver_thickness_gain = 0.005f;
+        qvh->finalize();
+        v.addVisualModel (qvh);
+
+        qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.v_plane_position, sm::vec<>{-7, 0, 0},
+                                                                &oces_reader.v_plane_orientation,
+                                                                mplot::ColourMapType::MonochromeRed);
+        qvh->set_parent (v.get_id());
+        qvh->quiver_length_gain = 4.0f;
+        qvh->quiver_thickness_gain = 0.005f;
+        qvh->finalize();
+        v.addVisualModel (qvh);
     }
 
     mplot::meshgroup* head_mesh_ptr = nullptr;

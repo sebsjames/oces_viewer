@@ -70,8 +70,10 @@ export namespace oces
 
         // Horizontally projected orientations, for visualization
         sm::vvec<sm::vec<float, 3>> h_plane_orientation;
+        sm::vvec<sm::vec<float, 3>> h_plane_position;
         // Vertically projected orientations, for visualization
         sm::vvec<sm::vec<float, 3>> v_plane_orientation;
+        sm::vvec<sm::vec<float, 3>> v_plane_position;
 
         // A second eye may be mirrored by a mirrorplane
         std::vector<oces::mirrorplane> mirrorplanes;
@@ -89,39 +91,48 @@ export namespace oces
         {
             this->filename = _filename;
             this->read();
+            this->postprocess();
         }
 
         void read (const std::string& _filename)
         {
             this->filename = _filename;
             this->read();
-            this->postprocess();
         }
 
-        // Stats etc to be computed after reading
-        void postprocess()
+        void compute_fov_max()
         {
-            // Compute FOV max
             auto horz_fov_r = sm::range<float>::search_initialized();
             auto vert_fov_r = sm::range<float>::search_initialized();
+
             std::uint32_t omm_per_eye = this->orientation.size();
             if (!this->mirrorplanes.empty()) {
                 // Two eyes are stored in this->orientation.
                 omm_per_eye /= 2u;
             }
             std::cout << "We have " << omm_per_eye << " orientations\n";
+
             this->h_plane_orientation.resize (omm_per_eye);
             this->v_plane_orientation.resize (omm_per_eye);
+            this->h_plane_position.resize (omm_per_eye);
+            this->v_plane_position.resize (omm_per_eye);
+
             for (std::uint32_t i = 0; i < omm_per_eye; ++i) {
-                auto onto_y_i = sm::geometry::vector_plane_projection (this->orientation[i], sm::vec<>::uy()); // horz fov
+                // horz fov
+                auto onto_y_i = sm::geometry::vector_plane_projection (sm::vec<>::uy(), this->orientation[i]);
                 this->h_plane_orientation[i] = onto_y_i;
-                auto onto_z_i = sm::geometry::vector_plane_projection (this->orientation[i], sm::vec<>::uz()); // vert fov
+                this->h_plane_position[i] = sm::geometry::vector_plane_projection (sm::vec<>::uy(), this->position[i]);
+                // vert fov
+                auto onto_z_i = sm::geometry::vector_plane_projection (sm::vec<>::uz(), this->orientation[i]);
                 this->v_plane_orientation[i] = onto_z_i;
+                this->v_plane_position[i] = sm::geometry::vector_plane_projection (sm::vec<>::uz(), this->position[i]);
+
+                // Compare angle to all others
                 for (std::uint32_t j = 0; j < omm_per_eye; ++j) {
                     if (j != i) {
                         // project onto the plane
-                        auto onto_y_j = sm::geometry::vector_plane_projection (this->orientation[j], sm::vec<>::uy()); // horz fov
-                        auto onto_z_j = sm::geometry::vector_plane_projection (this->orientation[j], sm::vec<>::uz()); // vert fov
+                        auto onto_y_j = sm::geometry::vector_plane_projection (sm::vec<>::uy(), this->orientation[j]); // horz fov
+                        auto onto_z_j = sm::geometry::vector_plane_projection (sm::vec<>::uz(), this->orientation[j]); // vert fov
 
                         float horz_ang = onto_y_i.angle (onto_y_j);
                         float vert_ang = onto_z_i.angle (onto_z_j);
@@ -130,12 +141,19 @@ export namespace oces
                     }
                 }
             }
+
             std::cout << "horz_fov range " << horz_fov_r << std::endl;
             std::cout << "vert_fov range " << vert_fov_r << std::endl;
             std::cout << "horz_fov range max " << (horz_fov_r.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
             std::cout << "vert_fov range max " << (vert_fov_r.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
             this->horz_fov = horz_fov_r.max;
             this->vert_fov = vert_fov_r.max;
+        }
+
+        // Stats etc to be computed after reading
+        void postprocess()
+        {
+            this->compute_fov_max();
         }
 
         void read()

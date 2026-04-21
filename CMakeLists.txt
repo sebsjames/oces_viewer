@@ -23,8 +23,8 @@ set(MPLOT_INC_EXTRA ${HDF5_INCLUDE_DIR})
 include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS})
 # Assuming that you installed mathplot in-tree (i.e. 'next to' yourprog.cpp).
 set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot" CACHE PATH "The path to mathplot")
-include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.h to be found
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern/maths)   # Allows sm/Header.h to be found
+include_directories(BEFORE ${MPLOT_INCLUDE_PATH})          # Allows mplot/Header.h to be found
+include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern/maths) # Allows sm/Header.h to be found
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
@@ -55,6 +55,7 @@ list(REMOVE_DUPLICATES OCES_READER_MODULES)
 set(OCES_VM_MODULES
   ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.cppm
   ${MPLOT_INCLUDE_PATH}/mplot/ColourBarVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/QuiverVisual.cppm
   ${MPLOT_INCLUDE_PATH}/mplot/compoundray/EyeVisual.cppm
 )
 
