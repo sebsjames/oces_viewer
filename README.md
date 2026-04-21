@@ -1,6 +1,6 @@
 # oces_viewer
 
-A reader library `oces::reader` and a couple of programs for reading Open Compound Eye Standard (OCES) files.
+A reader library module `oces::reader` and a couple of programs for reading Open Compound Eye Standard (OCES) files.
 
 * **oces2cray** Opens an OCES file and outputs the ommatidia data in libcompound-ray eye file format to stdout
 * **oces_viewer** Opens an OCES file and visualizes the eye and head.
@@ -8,37 +8,50 @@ A reader library `oces::reader` and a couple of programs for reading Open Compou
 ![Screenshot of Velox head and eyes](https://github.com/sebsjames/oces_viewer/blob/main/data/velox-head.png?raw=true)
 
 
-## Dependencies
+## Getting the code
 
-Clone this with submodules. These include tinygltf and mathplot, which itself has a submodule
+Clone this repo from github with submodules.
 
 ```bash
 git clone git@github.com:sebsjames/oces_viewer
 cd oces_viewer
-git submodule update --init --recursive
+git submodule init
+git submodule update
 ```
 
-## gcc-14
+The submodules are: [sebsjames/mathplot](https://github.com/sebsjames/mathplot), [sebsjames/maths](https://github.com/sebsjames/maths), [args](https://github.com/Taywee/args) and [tinygltf](https://github.com/sebsjames/tinygltf).
 
-Currently, tinygltf won't compile with gcc-14:
 
+## Build tools
+
+To compile oces_viewer, you need:
+
+* clang-20 or higher.
+* cmake version 3.28.5 or higher. Either `apt install cmake` on Ubuntu 25+ or download and build cmake from the cmake.org download page (it's an easy, reliable compile).
+* ninja (`apt install ninja-build`)
+
+
+## Build
+
+Do a cmake build
+
+```bash
+cd oces_viewer
+mkdir build
+pushd build
+CC=clang-20 CXX=clang++-20 cmake .. -GNinja
+make
+popd
 ```
-[13:18:51 build] make
-[ 50%] Building CXX object CMakeFiles/oces_viewer.dir/oces_viewer.cpp.o
-In file included from /home/seb/src/oces_viewer/extern/tinygltf/tiny_gltf.h:1734,
-                 from /home/seb/src/oces_viewer/oces_viewer.cpp:11:
-/home/seb/src/oces_viewer/extern/tinygltf/stb_image.h: In function 'int stbi__parse_png_file(stbi__png*, int, int)':
-/home/seb/src/oces_viewer/extern/tinygltf/stb_image.h:5186:56: error: writing 1 byte into a region of size 0 [-Werror=stringop-overflow=]
- 5186 |                   for (k = 0; k < s->img_n; ++k) tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
-      |                                                  ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-compilation terminated due to -Wfatal-errors.
-cc1plus: all warnings being treated as errors
-make[2]: *** [CMakeFiles/oces_viewer.dir/build.make:76: CMakeFiles/oces_viewer.dir/oces_viewer.cpp.o] Error 1
-make[1]: *** [CMakeFiles/Makefile2:83: CMakeFiles/oces_viewer.dir/all] Error 2
-make: *** [Makefile:91: all] Error 2
-[13:19:39 build] gcc --version
-gcc (Ubuntu 14.2.0-4ubuntu2~24.04) 14.2.0
-Copyright (C) 2024 Free Software Foundation, Inc.
-This is free software; see the source for copying conditions.  There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+## Run the program
+
+To see command line options:
+```bash
+./build/oces_viewer -h
+```
+
+To view the velox-head data:
+```bash
+./build/oces_viewer -f data/velox-head.gltf -r 0.0002 -c -0.00056,0.00005,-0.00005 -x1,0,0 -o0.2 -s -y
 ```
