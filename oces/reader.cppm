@@ -27,6 +27,7 @@ export import sm.mathconst;
 export import sm.vvec;
 export import sm.vec;
 export import sm.mat;
+export import sm.geometry;
 
 export namespace oces
 {
@@ -62,6 +63,16 @@ export namespace oces
         sm::vvec<float> diameter = {};                // Optical diameter. Units: m
         sm::vvec<float> acceptance_angle = {};        // Derived from diameter and focal offset. Units: radians.
 
+        // Horizontal field of view (about the up axis, which is y in OCES)
+        float horz_fov = 0.0f;
+        // Vertical field of view (about the fwds axis, which is z in OCES)
+        float vert_fov = 0.0f;
+
+        // Horizontally projected orientations, for visualization
+        sm::vvec<sm::vec<float, 3>> h_plane_orientation;
+        // Vertically projected orientations, for visualization
+        sm::vvec<sm::vec<float, 3>> v_plane_orientation;
+
         // A second eye may be mirrored by a mirrorplane
         std::vector<oces::mirrorplane> mirrorplanes;
         // Store the matrix for the mirrors defined in mirrorplanes
@@ -84,6 +95,47 @@ export namespace oces
         {
             this->filename = _filename;
             this->read();
+            this->postprocess();
+        }
+
+        // Stats etc to be computed after reading
+        void postprocess()
+        {
+            // Compute FOV max
+            auto horz_fov_r = sm::range<float>::search_initialized();
+            auto vert_fov_r = sm::range<float>::search_initialized();
+            std::uint32_t omm_per_eye = this->orientation.size();
+            if (!this->mirrorplanes.empty()) {
+                // Two eyes are stored in this->orientation.
+                omm_per_eye /= 2u;
+            }
+            std::cout << "We have " << omm_per_eye << " orientations\n";
+            this->h_plane_orientation.resize (omm_per_eye);
+            this->v_plane_orientation.resize (omm_per_eye);
+            for (std::uint32_t i = 0; i < omm_per_eye; ++i) {
+                auto onto_y_i = sm::geometry::vector_plane_projection (this->orientation[i], sm::vec<>::uy()); // horz fov
+                this->h_plane_orientation[i] = onto_y_i;
+                auto onto_z_i = sm::geometry::vector_plane_projection (this->orientation[i], sm::vec<>::uz()); // vert fov
+                this->v_plane_orientation[i] = onto_z_i;
+                for (std::uint32_t j = 0; j < omm_per_eye; ++j) {
+                    if (j != i) {
+                        // project onto the plane
+                        auto onto_y_j = sm::geometry::vector_plane_projection (this->orientation[j], sm::vec<>::uy()); // horz fov
+                        auto onto_z_j = sm::geometry::vector_plane_projection (this->orientation[j], sm::vec<>::uz()); // vert fov
+
+                        float horz_ang = onto_y_i.angle (onto_y_j);
+                        float vert_ang = onto_z_i.angle (onto_z_j);
+                        horz_fov_r.update (horz_ang);
+                        vert_fov_r.update (vert_ang);
+                    }
+                }
+            }
+            std::cout << "horz_fov range " << horz_fov_r << std::endl;
+            std::cout << "vert_fov range " << vert_fov_r << std::endl;
+            std::cout << "horz_fov range max " << (horz_fov_r.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
+            std::cout << "vert_fov range max " << (vert_fov_r.max * sm::mathconst<float>::rad2deg) << " deg" << std::endl;
+            this->horz_fov = horz_fov_r.max;
+            this->vert_fov = vert_fov_r.max;
         }
 
         void read()

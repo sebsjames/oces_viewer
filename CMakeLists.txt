@@ -24,8 +24,7 @@ include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR
 # Assuming that you installed mathplot in-tree (i.e. 'next to' yourprog.cpp).
 set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot" CACHE PATH "The path to mathplot")
 include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.h to be found
-include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
-
+include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern/maths)   # Allows sm/Header.h to be found
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
@@ -33,89 +32,53 @@ include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 add_library(glad STATIC ${MPLOT_INCLUDE_PATH}/mplot/glad/gl.c)
 add_library(mplot_fontdata STATIC ${MPLOT_INCLUDE_PATH}/mplot/VisualFaceAsm.cpp)
 
+# We obtain module variable definitions from some of our dependencies
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/extern/maths/cmake" ${CMAKE_MODULE_PATH})
+
+# Include maths module defs
+include(${PROJECT_SOURCE_DIR}/extern/maths/cmake/module_definitions.cmake)
+setup_module_variables_for_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+# Include mathplot module defs
+include(${PROJECT_SOURCE_DIR}/extern/mathplot/cmake/module_definitions.cmake)
+setup_module_variables_for_mathplot_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+setup_module_variables_for_mathplot (${PROJECT_SOURCE_DIR}/extern/mathplot)
+
 # OCES (this code)
-set(MY_MODULES ${PROJECT_SOURCE_DIR}/oces/reader)
-set_source_files_properties (${MY_MODULES} PROPERTIES LANGUAGE CXX)
-
-# sebsjames/maths
-set(MATHS_MODULES
-  ${MPLOT_INCLUDE_PATH}/maths/sm/mathconst
-  ${MPLOT_INCLUDE_PATH}/maths/sm/constexpr_math
-  ${MPLOT_INCLUDE_PATH}/maths/sm/range
-  ${MPLOT_INCLUDE_PATH}/maths/sm/random
-  ${MPLOT_INCLUDE_PATH}/maths/sm/vec
-  ${MPLOT_INCLUDE_PATH}/maths/sm/vvec
-  ${MPLOT_INCLUDE_PATH}/maths/sm/quaternion
-  ${MPLOT_INCLUDE_PATH}/maths/sm/mat
+set(OCES_READER_MODULES
+  ${SM_MAT_MODULES}
+  ${SM_GEOMETRY_MODULES}
+  ${PROJECT_SOURCE_DIR}/oces/reader.cppm
 )
-set_source_files_properties (${MATHS_MODULES} PROPERTIES LANGUAGE CXX)
+list(REMOVE_DUPLICATES OCES_READER_MODULES)
 
-set(MATHPLOT_MATHS_MODULES
-  ${MPLOT_INCLUDE_PATH}/maths/sm/util
-  ${MPLOT_INCLUDE_PATH}/maths/sm/scale
-  ${MPLOT_INCLUDE_PATH}/maths/sm/flags
-  ${MPLOT_INCLUDE_PATH}/maths/sm/algo
-  ${MPLOT_INCLUDE_PATH}/maths/sm/geometry
-  ${MPLOT_INCLUDE_PATH}/maths/sm/geometry_polyhedra
-  ${MPLOT_INCLUDE_PATH}/maths/sm/crc32
-  ${MPLOT_INCLUDE_PATH}/maths/sm/base64
-  ${MPLOT_INCLUDE_PATH}/maths/sm/centroid
-  ${MPLOT_INCLUDE_PATH}/maths/sm/winder
+set(OCES_VM_MODULES
+  ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/ColourBarVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/compoundray/EyeVisual.cppm
 )
-set_source_files_properties (${MATHPLOT_MATHS_MODULES} PROPERTIES LANGUAGE CXX)
-
-# mathplot
-set(MATHPLOT_CORE_MODULES
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualOwnable.h
-  ${MPLOT_INCLUDE_PATH}/mplot/Visual.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualGlfw.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualFace.h
-  ${MPLOT_INCLUDE_PATH}/mplot/TextFeatures.h
-  ${MPLOT_INCLUDE_PATH}/mplot/TextGeometry.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualResources.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualCommon.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualFont.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualTextModel.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualModel.h
-  ${MPLOT_INCLUDE_PATH}/mplot/VisualDataModel.h
-  ${MPLOT_INCLUDE_PATH}/mplot/NavMesh.h
-  ${MPLOT_INCLUDE_PATH}/mplot/ColourMap.h
-  ${MPLOT_INCLUDE_PATH}/mplot/colourmaps_cet.h
-  ${MPLOT_INCLUDE_PATH}/mplot/colourmaps_crameri.h
-  ${MPLOT_INCLUDE_PATH}/mplot/ColourMap_Lists.h
-  ${MPLOT_INCLUDE_PATH}/mplot/CoordArrows.h
-  ${MPLOT_INCLUDE_PATH}/mplot/win_t.h
-  ${MPLOT_INCLUDE_PATH}/mplot/colour.h
-  ${MPLOT_INCLUDE_PATH}/mplot/tools.h
-  ${MPLOT_INCLUDE_PATH}/mplot/unicode.h
-  ${MPLOT_INCLUDE_PATH}/mplot/loadpng.h
-  ${MPLOT_INCLUDE_PATH}/mplot/gl/version.h
-  ${MPLOT_INCLUDE_PATH}/mplot/gl/util_mx.h
-  ${MPLOT_INCLUDE_PATH}/mplot/graphing.h
-  ${MPLOT_INCLUDE_PATH}/mplot/graphstyles.h
-  ${MPLOT_INCLUDE_PATH}/mplot/DatasetStyle.h
-)
-set_source_files_properties (${MATHPLOT_CORE_MODULES} PROPERTIES LANGUAGE CXX)
-
-set(MATHPLOT_VM_MODULES
-  ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.h
-  ${MPLOT_INCLUDE_PATH}/mplot/ColourBarVisual.h
-  ${MPLOT_INCLUDE_PATH}/mplot/compoundray/EyeVisual.h
-)
-set_source_files_properties (${MATHPLOT_VM_MODULES} PROPERTIES LANGUAGE CXX)
 
 # View the eye with a mathplot-based program
+set(OCES_VIEWER_MODULES
+  ${OCES_READER_MODULES}
+  ${MPLOT_MATHS_CORE_MODULES}
+  ${MPLOT_MATHS_VISUALMODEL_MODULES}
+  ${MPLOT_CORE_MODULES}
+  ${OCES_VM_MODULES}
+)
+list(REMOVE_DUPLICATES OCES_VIEWER_MODULES)
+
 add_executable(oces_viewer oces_viewer.cpp)
 target_sources(oces_viewer
   PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES ${MY_MODULES} ${MATHS_MODULES} ${MATHPLOT_MATHS_MODULES} ${MATHPLOT_CORE_MODULES} ${MATHPLOT_VM_MODULES}
+  FILES ${OCES_VIEWER_MODULES}
 )
 target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
 add_executable(oces_hexy oces_hexy.cpp)
 target_sources(oces_hexy
   PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES ${MY_MODULES} ${MATHS_MODULES} ${MATHPLOT_MATHS_MODULES} ${MATHPLOT_CORE_MODULES} ${MATHPLOT_VM_MODULES}
+  FILES ${OCES_VIEWER_MODULES}
 )
 target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
@@ -123,5 +86,5 @@ target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw glad mplot_fo
 add_executable(oces2cray oces2cray.cpp)
 target_sources(oces2cray
   PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES ${MY_MODULES} ${MATHS_MODULES}
+  FILES ${OCES_READER_MODULES}
 )
