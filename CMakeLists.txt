@@ -43,14 +43,11 @@ setup_module_variables_for_maths (${PROJECT_SOURCE_DIR}/extern/maths)
 include(${PROJECT_SOURCE_DIR}/extern/mathplot/cmake/module_definitions.cmake)
 setup_module_variables_for_mathplot_maths (${PROJECT_SOURCE_DIR}/extern/maths)
 setup_module_variables_for_mathplot (${PROJECT_SOURCE_DIR}/extern/mathplot)
-
-# OCES (this code)
-set(OCES_READER_MODULES
-  ${SM_MAT_MODULES}
-  ${SM_GEOMETRY_MODULES}
-  ${PROJECT_SOURCE_DIR}/oces/reader.cppm
-)
-list(REMOVE_DUPLICATES OCES_READER_MODULES)
+# Add our own cmake directory
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(${PROJECT_SOURCE_DIR}/cmake/module_definitions.cmake)
+setup_module_variables_for_oces_reader_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+setup_module_variables_for_oces_reader (${PROJECT_SOURCE_DIR})
 
 set(OCES_VM_MODULES
   ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.cppm
@@ -61,6 +58,7 @@ set(OCES_VM_MODULES
 
 # View the eye with a mathplot-based program
 set(OCES_VIEWER_MODULES
+  ${OCES_READER_MATHS_MODULES}
   ${OCES_READER_MODULES}
   ${MPLOT_MATHS_CORE_MODULES}
   ${MPLOT_MATHS_VISUALMODEL_MODULES}
@@ -87,5 +85,5 @@ target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw glad mplot_fo
 add_executable(oces2cray oces2cray.cpp)
 target_sources(oces2cray
   PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES ${OCES_READER_MODULES}
+  FILES ${OCES_READER_MATHS_MODULES} ${OCES_READER_MODULES}
 )
