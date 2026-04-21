@@ -5,16 +5,17 @@
  * known, and which has the right outline and ommatidia directions.
  */
 
+#include <memory>
 #include <iostream>
 #include <string>
-#include <oces/reader>
 #define ARGS_NOEXCEPT 1
 #include <args/args.hxx> // github.com/Taywee/args
 
-#include <mplot/Visual.h>
-#include <mplot/ColourMap.h>
-#include <mplot/SphereVisual.h>
-#include <mplot/compoundray/EyeVisual.h>
+import oces.reader;
+import mplot.visual;
+import mplot.spherevisual;
+import mplot.colourbarvisual;
+import mplot.compoundray.eyevisual;
 
 int main (int argc, char** argv)
 {
@@ -66,7 +67,7 @@ int main (int argc, char** argv)
 
     oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
     auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(), head_mesh_ptr);
-    v.bindmodel (eyevm);
+    eyevm->set_parent (v.get_id());
     eyevm->name = "CompoundRay Eye";
     eyevm->show_cones = true;
     eyevm->show_rays = (a_showrays ? true : false);

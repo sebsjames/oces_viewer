@@ -4,7 +4,8 @@
 
 #include <iostream>
 #include <string>
-#include <oces/reader>
+
+import oces.reader;
 
 int main (int argc, char** argv)
 {

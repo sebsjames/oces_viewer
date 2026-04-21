@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(oces_viewer)
+cmake_minimum_required(VERSION 3.28.5)
+project(oces_viewer LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 20)
 
 if (APPLE)
@@ -23,18 +23,67 @@ set(MPLOT_INC_EXTRA ${HDF5_INCLUDE_DIR})
 include_directories(${MPLOT_INC_EXTRA} ${OPENGL_INCLUDE_DIR} ${GLFW3_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS})
 # Assuming that you installed mathplot in-tree (i.e. 'next to' yourprog.cpp).
 set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot" CACHE PATH "The path to mathplot")
-include_directories(BEFORE ${MPLOT_INCLUDE_PATH})         # Allows mplot/Header.h to be found
-include_directories(BEFORE ${MPLOT_INCLUDE_PATH}/maths)   # Allows sm/Header.h to be found
-
+include_directories(BEFORE ${MPLOT_INCLUDE_PATH})          # Allows mplot/Header.h to be found
+include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern/maths) # Allows sm/Header.h to be found
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/extern)   # tinygltf etc
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})          # oces/reader.h
 
+# For viewer programs that use mathplot, we have to compile libglad and libmathplot_fonts
+add_library(glad STATIC ${MPLOT_INCLUDE_PATH}/mplot/glad/gl.c)
+add_library(mplot_fontdata STATIC ${MPLOT_INCLUDE_PATH}/mplot/VisualFaceAsm.cpp)
+
+# We obtain module variable definitions from some of our dependencies
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/extern/maths/cmake" ${CMAKE_MODULE_PATH})
+
+# Include maths module defs
+include(${PROJECT_SOURCE_DIR}/extern/maths/cmake/module_definitions.cmake)
+setup_module_variables_for_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+# Include mathplot module defs
+include(${PROJECT_SOURCE_DIR}/extern/mathplot/cmake/module_definitions.cmake)
+setup_module_variables_for_mathplot_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+setup_module_variables_for_mathplot (${PROJECT_SOURCE_DIR}/extern/mathplot)
+# Add our own cmake directory
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(${PROJECT_SOURCE_DIR}/cmake/module_definitions.cmake)
+setup_module_variables_for_oces_reader_maths (${PROJECT_SOURCE_DIR}/extern/maths)
+setup_module_variables_for_oces_reader (${PROJECT_SOURCE_DIR})
+
+set(OCES_VM_MODULES
+  ${MPLOT_INCLUDE_PATH}/mplot/SphereVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/ColourBarVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/QuiverVisual.cppm
+  ${MPLOT_INCLUDE_PATH}/mplot/compoundray/EyeVisual.cppm
+)
+
 # View the eye with a mathplot-based program
+set(OCES_VIEWER_MODULES
+  ${OCES_READER_MATHS_MODULES}
+  ${OCES_READER_MODULES}
+  ${MPLOT_MATHS_CORE_MODULES}
+  ${MPLOT_MATHS_VISUALMODEL_MODULES}
+  ${MPLOT_CORE_MODULES}
+  ${OCES_VM_MODULES}
+)
+list(REMOVE_DUPLICATES OCES_VIEWER_MODULES)
+
 add_executable(oces_viewer oces_viewer.cpp)
-target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw)
+target_sources(oces_viewer
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${OCES_VIEWER_MODULES}
+)
+target_link_libraries(oces_viewer OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
 add_executable(oces_hexy oces_hexy.cpp)
-target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw)
+target_sources(oces_hexy
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${OCES_VIEWER_MODULES}
+)
+target_link_libraries(oces_hexy OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
 
 # OCES format to compound-ray format (text output)
 add_executable(oces2cray oces2cray.cpp)
+target_sources(oces2cray
+  PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${OCES_READER_MATHS_MODULES} ${OCES_READER_MODULES}
+)
