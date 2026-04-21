@@ -3,6 +3,7 @@
  */
 
 #include <memory>
+#include <format>
 #include <iostream>
 #include <string>
 #define ARGS_NOEXCEPT 1
@@ -140,15 +141,23 @@ int main (int argc, char** argv)
         qvh->set_parent (v.get_id());
         qvh->quiver_length_gain = 4.0f;
         qvh->quiver_thickness_gain = 0.005f;
+        qvh->addLabel (std::format ("Horz FOV: {:.2f}{}",
+                                    (oces_reader.horz_fov * sm::mathconst<float>::rad2deg),
+                                    mplot::unicode::toUtf8(mplot::unicode::degreesign)),
+                       sm::vec<float>{-4,0,4}, mplot::TextFeatures(0.12f));
         qvh->finalize();
         v.addVisualModel (qvh);
 
         qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.v_plane_position, sm::vec<>{-7, 0, 0},
-                                                                &oces_reader.v_plane_orientation,
-                                                                mplot::ColourMapType::MonochromeRed);
+                                                           &oces_reader.v_plane_orientation,
+                                                           mplot::ColourMapType::MonochromeRed);
         qvh->set_parent (v.get_id());
         qvh->quiver_length_gain = 4.0f;
         qvh->quiver_thickness_gain = 0.005f;
+        qvh->addLabel (std::format ("Vert FOV: {:.2f}{}",
+                                    (oces_reader.vert_fov * sm::mathconst<float>::rad2deg),
+                                    mplot::unicode::toUtf8(mplot::unicode::degreesign)),
+                       sm::vec<float>{-4,3,0}, mplot::TextFeatures(0.12f));
         qvh->finalize();
         v.addVisualModel (qvh);
     }
