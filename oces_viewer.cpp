@@ -114,7 +114,9 @@ mplot::compoundray::EyeVisual<>* make_eye_model (OcesVisual& v, oces::reader& oc
     eyevm->pre_set_cone_length (0.005f);
     eyevm->finalize();
 
-    return v.addVisualModel (eyevm);
+    mplot::compoundray::EyeVisual<>* _ep = v.addVisualModel (eyevm);
+    _ep->scaleViewMatrix (1000.0f); // Tiny ant eyes are scaled by a big factor to be in more useable model units
+    return _ep;
 }
 
 int main (int argc, char** argv)
@@ -272,8 +274,6 @@ int main (int argc, char** argv)
     auto ep = make_eye_model (v, oces_reader, ommatidia.get(), &ommatidiaColours,
                               projstr, psrad, pscentre, psr, psrax, twod_shift, nullptr);
 
-    ep->scaleViewMatrix (1000.0f);
-
     sm::flags<viewopts> last_view_options = v.view_options;
     while (!v.readyToFinish()) {
         v.waitevents (0.016);
@@ -285,7 +285,6 @@ int main (int argc, char** argv)
             // Everything else is part of eyevm.
             ep = make_eye_model (v, oces_reader, ommatidia.get(), &ommatidiaColours,
                                  projstr, psrad, pscentre, psr, psrax, twod_shift, ep);
-            ep->scaleViewMatrix (1000.0f);
             last_view_options = v.view_options;
         }
         v.render();
