@@ -15,6 +15,107 @@ import mplot.spherevisual;
 import mplot.colourbarvisual;
 import mplot.quivervisual;
 import mplot.compoundray.eyevisual;
+import sm.flags;
+
+// Enumerate our view options
+enum class viewopts : std::uint32_t
+{
+    show_fov,
+    show_proj_fov,
+    show_sphere,
+    show_rays,
+    show_head,
+};
+
+// Extend mplot::Visual for key-commands
+struct OcesVisual final : public mplot::Visual<>
+{
+    // Boilerplate constructor calls Visual constructor
+    OcesVisual(int width, int height, const std::string & title) : mplot::Visual<>(width, height, title) {}
+    // Boolean flags for what we want to have visible
+    sm::flags<viewopts> view_options;
+protected:
+    // Add our key event handling in this extension of mplot::Visual::key_callback_extra
+    void key_callback_extra ([[maybe_unused]] int key, [[maybe_unused]] int scancode,
+                             [[maybe_unused]] int action, [[maybe_unused]] int mods) override
+    {
+        if (key == mplot::key::v && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_fov); }
+        if (key == mplot::key::p && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_proj_fov); }
+        if (key == mplot::key::s && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_sphere); }
+        if (key == mplot::key::y && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_rays); }
+        if (key == mplot::key::i && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_head); }
+        // Add app-specific help output:
+        if (key == mplot::key::h && action == mplot::keyaction::press) {
+            std::cout << "OCES Viewer key commands:\n";
+            std::cout << "v: Toggle FOV\n";
+            std::cout << "p: Toggle projected horz/vert FOV\n";
+            std::cout << "s: Toggle Sphere\n";
+            std::cout << "y: Toggle Rays\n";
+            std::cout << "i: Toggle Head\n";
+        }
+    }
+};
+
+// Helper to make (and remake) the eye model
+mplot::compoundray::EyeVisual<>* make_eye_model (OcesVisual& v, oces::reader& oces_reader,
+                                                 std::vector<mplot::compoundray::Ommatidium>* ommatidia,
+                                                 std::vector<std::array<float, 3>>* ommatidiaColours,
+                                                 const std::string& projstr,
+                                                 const float psrad, sm::vec<float> pscentre, const float psr,
+                                                 const sm::vec<float>& psrax, const sm::vec<float>& twod_shift,
+                                                 mplot::compoundray::EyeVisual<>* ep)
+{
+    if (ep != nullptr) { v.removeVisualModel (ep); }
+
+    mplot::meshgroup* head_mesh_ptr = nullptr;
+    if (v.view_options.test (viewopts::show_head)) {
+        head_mesh_ptr = reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh);
+    }
+
+    // Set a fixed colour for head mesh
+    oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
+
+    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, ommatidiaColours, ommatidia, head_mesh_ptr);
+    eyevm->set_parent (v.get_id());
+    eyevm->name = "CompoundRay Eye";
+    eyevm->show_cones = true;
+
+    [[maybe_unused]] auto ptype = mplot::compoundray::EyeVisual<>::projection_type::equirectangular; // mercator, equirectangular or cassini
+    if (projstr.find ("merc") != std::string::npos) {
+        ptype = mplot::compoundray::EyeVisual<>::projection_type::mercator;
+    } else if (projstr.find ("cass") != std::string::npos) {
+        ptype = mplot::compoundray::EyeVisual<>::projection_type::cassini;
+    }
+
+    sm::mat<float, 4> twod_tr;
+    twod_tr.translate (twod_shift);
+
+    if (psrad > 0.0f) {
+        // To avoid 2D, don't add spherical projections
+        std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
+        sm::quaternion<float> psrotn (psrax, psr);
+        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn, 0, oces_reader.position.size() / 2);
+        if (oces_reader.mirrors.empty() == false) {
+            pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
+            std::cout << "New centre: " << pscentre << std::endl;
+
+            sm::vec<> twod_shift_left = twod_shift;
+            twod_shift_left[0] *= -1.0f;
+            twod_tr.set_identity();
+            twod_tr.translate (twod_shift_left);
+            eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
+                                             oces_reader.position.size() / 2, oces_reader.position.size());
+        }
+    }
+    eyevm->show_sphere = v.view_options.test (viewopts::show_sphere);
+    eyevm->show_rays = v.view_options.test (viewopts::show_rays);
+    eyevm->show_cones = false;
+    eyevm->show_fov = v.view_options.test (viewopts::show_fov);
+    eyevm->pre_set_cone_length (0.005f);
+    eyevm->finalize();
+
+    return v.addVisualModel (eyevm);
+}
 
 int main (int argc, char** argv)
 {
@@ -39,9 +140,9 @@ int main (int argc, char** argv)
     sm::vec<float> pscentre = { 0, 0, 0 };
     float psr = 0.0f;
     sm::vec<float> psrax = { 0, 1, 0 };
-    sm::vec<> twod_shift = { -0.0005, 0.0006, 0 }; // A shift of the twod representation of the
-                                                   // right eye (the purple one in the example
-                                                   // velox-head filef)
+    sm::vec<float> twod_shift = { -0.0005, 0.0006, 0 }; // A shift of the twod representation of the
+                                                        // right eye (the purple one in the example
+                                                        // velox-head filef)
 
     if (a_fname) {
         filename = args::get (a_fname);
@@ -86,8 +187,15 @@ int main (int argc, char** argv)
     if (oces_reader.read_success == false) { return -1; }
 
     // Now view
-    auto v = mplot::Visual<>(1024, 768, "mplot::compoundray::EyeVisual");
+    auto v = OcesVisual(1024, 768, "mplot::compoundray::EyeVisual");
     v.lightingEffects (true);
+
+    // Copy cmd line options into v
+    v.view_options.set (viewopts::show_fov, (a_fov ? true : false));
+    v.view_options.set (viewopts::show_proj_fov, (a_fov ? true : false)); // use a_fov here, too
+    v.view_options.set (viewopts::show_rays, (a_showrays ? true : false));
+    v.view_options.set (viewopts::show_sphere, (a_showsphere ? true : false));
+    v.view_options.set (viewopts::show_head, (a_hidehead ? false : true));
 
     // We read the information from the eye file into a vector of Ommatidium objects.  Ommatidium is
     // defined in "cameras/CompoundEyeDataTypes.h" in compound ray, mplot::Ommatidium is a
@@ -117,99 +225,71 @@ int main (int argc, char** argv)
     }
 
     // Place a colour bar for the ommtidia index
-    if (!a_fov) {
-        auto cbv = std::make_unique<mplot::ColourBarVisual<float>>(sm::vec<>{0.6f,-1,0});
-        cbv->set_parent (v.get_id());
-        cbv->orientation = mplot::colourbar_orientation::horizontal;
-        cbv->tickside = mplot::colourbar_tickside::right_or_below;
-        cbv->cm = cm;
-        cbv->width = 0.08f;
-        cbv->length = 0.5f;
-        cbv->tf.fontsize = 0.04f;
-        cbv->scale.compute_scaling (0.0f, static_cast<float>(ommatidia->size() - 1));
-        cbv->addLabel ("Index 0-" + std::to_string (ommatidia->size() - 1),
-                       sm::vec<>{0, 0.15f, 0}, mplot::TextFeatures(0.05f));
-        cbv->finalize();
-        v.addVisualModel (cbv);
-    }
+    auto cbv = std::make_unique<mplot::ColourBarVisual<float>>(sm::vec<>{0.6f,-1,0});
+    cbv->set_parent (v.get_id());
+    cbv->orientation = mplot::colourbar_orientation::horizontal;
+    cbv->tickside = mplot::colourbar_tickside::right_or_below;
+    cbv->cm = cm;
+    cbv->width = 0.08f;
+    cbv->length = 0.5f;
+    cbv->tf.fontsize = 0.04f;
+    cbv->scale.compute_scaling (0.0f, static_cast<float>(ommatidia->size() - 1));
+    cbv->addLabel ("Index 0-" + std::to_string (ommatidia->size() - 1),
+                   sm::vec<>{0, 0.15f, 0}, mplot::TextFeatures(0.05f));
+    cbv->finalize();
+    auto cbvp = v.addVisualModel (cbv);
+    cbvp->setHide (v.view_options.test (viewopts::show_fov) == true);
 
     // Quivers for projected angles
-    if (a_fov) {
-        auto qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.h_plane_position, sm::vec<>{-7, 0, 0},
-                                                                &oces_reader.h_plane_orientation,
-                                                                mplot::ColourMapType::MonochromeGreen);
-        qvh->set_parent (v.get_id());
-        qvh->quiver_length_gain = 4.0f;
-        qvh->quiver_thickness_gain = 0.005f;
-        qvh->addLabel (std::format ("Horz FOV: {:.2f}{}",
-                                    (oces_reader.horz_fov * sm::mathconst<float>::rad2deg),
-                                    mplot::unicode::toUtf8(mplot::unicode::degreesign)),
-                       sm::vec<float>{-4,0,4}, mplot::TextFeatures(0.12f));
-        qvh->finalize();
-        v.addVisualModel (qvh);
+    auto qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.h_plane_position, sm::vec<>{-7, 0, 0},
+                                                            &oces_reader.h_plane_orientation,
+                                                            mplot::ColourMapType::MonochromeGreen);
+    qvh->set_parent (v.get_id());
+    qvh->quiver_length_gain = 4.0f;
+    qvh->quiver_thickness_gain = 0.005f;
+    qvh->addLabel (std::format ("Horz FOV: {:.2f}{}",
+                                (oces_reader.horz_fov * sm::mathconst<float>::rad2deg),
+                                mplot::unicode::toUtf8(mplot::unicode::degreesign)),
+                   sm::vec<float>{-4,0,4}, mplot::TextFeatures(0.12f));
+    qvh->finalize();
+    auto qvhp_h = v.addVisualModel (qvh);
+    qvhp_h->setHide (v.view_options.test (viewopts::show_proj_fov) == false);
 
-        qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.v_plane_position, sm::vec<>{-7, 0, 0},
-                                                           &oces_reader.v_plane_orientation,
-                                                           mplot::ColourMapType::MonochromeRed);
-        qvh->set_parent (v.get_id());
-        qvh->quiver_length_gain = 4.0f;
-        qvh->quiver_thickness_gain = 0.005f;
-        qvh->addLabel (std::format ("Vert FOV: {:.2f}{}",
-                                    (oces_reader.vert_fov * sm::mathconst<float>::rad2deg),
-                                    mplot::unicode::toUtf8(mplot::unicode::degreesign)),
-                       sm::vec<float>{-4,3,0}, mplot::TextFeatures(0.12f));
-        qvh->finalize();
-        v.addVisualModel (qvh);
-    }
+    qvh = std::make_unique<mplot::QuiverVisual<float>>(&oces_reader.v_plane_position, sm::vec<>{-7, 0, 0},
+                                                       &oces_reader.v_plane_orientation,
+                                                       mplot::ColourMapType::MonochromeRed);
+    qvh->set_parent (v.get_id());
+    qvh->quiver_length_gain = 4.0f;
+    qvh->quiver_thickness_gain = 0.005f;
+    qvh->addLabel (std::format ("Vert FOV: {:.2f}{}",
+                                (oces_reader.vert_fov * sm::mathconst<float>::rad2deg),
+                                mplot::unicode::toUtf8(mplot::unicode::degreesign)),
+                   sm::vec<float>{-4,3,0}, mplot::TextFeatures(0.12f));
+    qvh->finalize();
+    auto qvhp_v = v.addVisualModel (qvh);
+    qvhp_v->setHide (v.view_options.test (viewopts::show_proj_fov) == false);
 
-    mplot::meshgroup* head_mesh_ptr = nullptr;
-    if (!a_hidehead) { head_mesh_ptr = reinterpret_cast<mplot::meshgroup*>(&oces_reader.head_mesh); }
-
-    oces_reader.head_mesh.single_colour = {0.345f, 0.122f, 0.082f};
-    auto eyevm = std::make_unique<mplot::compoundray::EyeVisual<>> (sm::vec<>{}, &ommatidiaColours, ommatidia.get(), head_mesh_ptr);
-    eyevm->set_parent (v.get_id());
-    eyevm->name = "CompoundRay Eye";
-    eyevm->show_cones = true;
-
-    [[maybe_unused]] auto ptype = mplot::compoundray::EyeVisual<>::projection_type::equirectangular; // mercator, equirectangular or cassini
-    if (projstr.find ("merc") != std::string::npos) {
-        ptype = mplot::compoundray::EyeVisual<>::projection_type::mercator;
-    } else if (projstr.find ("cass") != std::string::npos) {
-        ptype = mplot::compoundray::EyeVisual<>::projection_type::cassini;
-    }
-
-    sm::mat<float, 4> twod_tr;
-    twod_tr.translate (twod_shift);
-
-    if (a_psrad) {
-        // To avoid 2D, don't add spherical projections
-        std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
-        sm::quaternion<float> psrotn (psrax, psr);
-        eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn, 0, oces_reader.position.size() / 2);
-        if (oces_reader.mirrors.empty() == false) {
-            pscentre = (oces_reader.mirrors[0] * pscentre).less_one_dim();
-            std::cout << "New centre: " << pscentre << std::endl;
-
-            sm::vec<> twod_shift_left = twod_shift;
-            twod_shift_left[0] *= -1.0f;
-            twod_tr.set_identity();
-            twod_tr.translate (twod_shift_left);
-            eyevm->add_spherical_projection (ptype, twod_tr, pscentre, psrad, psrotn.invert(),
-                                             oces_reader.position.size() / 2, oces_reader.position.size());
-        }
-    }
-    eyevm->show_sphere = (a_showsphere ? true : false);
-    eyevm->show_rays = (a_showrays ? true : false);
-    eyevm->show_cones = false;
-    eyevm->show_fov = (a_fov ? true : false);
-    eyevm->pre_set_cone_length (0.005f);
-    eyevm->finalize();
-
-    [[maybe_unused]] auto ep = v.addVisualModel (eyevm);
+    auto ep = make_eye_model (v, oces_reader, ommatidia.get(), &ommatidiaColours,
+                              projstr, psrad, pscentre, psr, psrax, twod_shift, nullptr);
 
     ep->scaleViewMatrix (1000.0f);
 
-    v.keepOpen();
+    sm::flags<viewopts> last_view_options = v.view_options;
+    while (!v.readyToFinish()) {
+        v.waitevents (0.016);
+        if (v.view_options.get() != last_view_options.get()) {
+            // Projected quivers and the colourbar are independent VisualModels, so setHide():
+            qvhp_h->setHide (v.view_options.test (viewopts::show_proj_fov) == false);
+            qvhp_v->setHide (v.view_options.test (viewopts::show_proj_fov) == false);
+            cbvp->setHide (v.view_options.test (viewopts::show_fov) == true);
+            // Everything else is part of eyevm.
+            ep = make_eye_model (v, oces_reader, ommatidia.get(), &ommatidiaColours,
+                                 projstr, psrad, pscentre, psr, psrax, twod_shift, ep);
+            ep->scaleViewMatrix (1000.0f);
+            last_view_options = v.view_options;
+        }
+        v.render();
+    }
 
     return 0;
 }
