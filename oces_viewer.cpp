@@ -28,6 +28,7 @@ int main (int argc, char** argv)
     args::ValueFlag<float>       a_psr  (ap, "psr",   "The projection sphere rotation radians (numeric value)", {'o'});
     args::ValueFlag<std::string> a_proj (ap, "proj",   "The projection type (equirectangular, mercator or cassini)", {'p'});
     args::Flag a_fov (ap, "fov", "Show field of view with acceptance angle cones", {'v', "fov"});
+    args::Flag a_verbose (ap, "verbose", "Print ommatidial positions and orientations to stdout", {'V', "verbose"});
     args::Flag a_hidehead (ap, "hidehead", "Hide the head, even if it was read from OCES file", {'i', "hidehead"});
     args::Flag a_showsphere (ap, "showsphere", "Show the 2D projection sphere", {'s', "showsphere"});
     args::Flag a_showrays (ap, "showrays", "Show the 2D ommatidia projection rays", {'y', "showrays"});
@@ -104,6 +105,15 @@ int main (int argc, char** argv)
         (*ommatidia)[i].relativeDirection = oces_reader.orientation[i];
         (*ommatidia)[i].focalPointOffset = oces_reader.focal_offset[i];
         (*ommatidia)[i].acceptanceAngleRadians = oces_reader.acceptance_angle[i];
+    }
+    if (a_verbose) {
+        for (size_t i = 0; i < oces_reader.position.size(); ++i) {
+            std::cout << "ommatidium[" << i << "]: posn = " <<  oces_reader.position[i]
+                      << ",  orientn = " << oces_reader.orientation[i]
+                      << ",  fo = " << oces_reader.focal_offset[i]
+                      << ",  aa = " << oces_reader.acceptance_angle[i]
+                      << std::endl;
+        }
     }
 
     // Make some dummy data to demo the eye
