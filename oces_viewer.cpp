@@ -23,6 +23,7 @@ enum class viewopts : std::uint32_t
     show_fov,
     show_proj_fov,
     show_sphere,
+    show_twod,
     show_rays,
     show_head,
 };
@@ -40,16 +41,18 @@ protected:
                              [[maybe_unused]] int action, [[maybe_unused]] int mods) override
     {
         if (key == mplot::key::v && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_fov); }
-        if (key == mplot::key::p && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_proj_fov); }
+        if (key == mplot::key::f && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_proj_fov); }
         if (key == mplot::key::s && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_sphere); }
+        if (key == mplot::key::p && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_twod); }
         if (key == mplot::key::y && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_rays); }
         if (key == mplot::key::i && action == mplot::keyaction::press) { this->view_options.flip (viewopts::show_head); }
         // Add app-specific help output:
         if (key == mplot::key::h && action == mplot::keyaction::press) {
             std::cout << "OCES Viewer key commands:\n";
             std::cout << "v: Toggle FOV\n";
-            std::cout << "p: Toggle projected horz/vert FOV\n";
+            std::cout << "f: Toggle projected horz/vert FOV\n";
             std::cout << "s: Toggle Sphere\n";
+            std::cout << "p: Toggle 2D projection of eye for visualizations\n";
             std::cout << "y: Toggle Rays\n";
             std::cout << "i: Toggle Head\n";
         }
@@ -90,7 +93,7 @@ mplot::compoundray::EyeVisual<>* make_eye_model (OcesVisual& v, oces::reader& oc
     sm::mat<float, 4> twod_tr;
     twod_tr.translate (twod_shift);
 
-    if (psrad > 0.0f) {
+    if (psrad > 0.0f && v.view_options.test (viewopts::show_twod)) {
         // To avoid 2D, don't add spherical projections
         std::cout << "Rotation about axis " << psrax << " by amount " << psr << " radians\n";
         sm::quaternion<float> psrotn (psrax, psr);
@@ -199,6 +202,7 @@ int main (int argc, char** argv)
     v.view_options.set (viewopts::show_rays, (a_showrays ? true : false));
     v.view_options.set (viewopts::show_sphere, (a_showsphere ? true : false));
     v.view_options.set (viewopts::show_head, (a_hidehead ? false : true));
+    v.view_options.set (viewopts::show_twod, (a_psrad ? true : false));
 
     // We read the information from the eye file into a vector of Ommatidium objects.  Ommatidium is
     // defined in "cameras/CompoundEyeDataTypes.h" in compound ray, mplot::Ommatidium is a
